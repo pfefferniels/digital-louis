@@ -1,0 +1,27 @@
+#svg5 {
+  width: 100%;
+}
+
+.with-glow {
+  filter: url(glow.svg#purple-glow);
+}
+
+.notehead:hover {
+  filter: url(glow.svg#purple-glow);
+}
+
+path:hover {
+  filter: url(glow.svg#purple-glow);
+}
+
+.notehead:hover {
+  opacity: 1;
+  fill: darkred;
+  cursor: pointer;
+  stroke-width: 2;
+}
+
+.notehead path:hover {
+  stroke-width: 2;
+}
+
