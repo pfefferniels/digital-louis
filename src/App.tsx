@@ -247,7 +247,12 @@ function App() {
   }, [toolkit, modernClefs])
 
   useLayoutEffect(() => {
+    // once encoding and facsimile are 
+    // loaded, connect them
     connectNotesToFacsimile()
+  }, [encoding, facsimile])
+
+  useLayoutEffect(() => {
     insertShadowSemibreves()
     addShiftInfo()
     changeVisibilities(0)
