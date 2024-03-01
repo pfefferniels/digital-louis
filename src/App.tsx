@@ -213,7 +213,7 @@ function App() {
     loadVerovio().then((toolkit: VerovioToolkit) => setToolkit(toolkit))
 
     const loadFacsimile = async () => {
-      const response = await fetch('prelude7.svg')
+      const response = await fetch(import.meta.env.BASE_URL  + '/prelude7.svg')
       setFacsimile(await response.text())
     }
 
@@ -224,7 +224,7 @@ function App() {
     if (!toolkit) return
 
     const loadEncoding = async () => {
-      const response = await fetch('prelude7.mei')
+      const response = await fetch(import.meta.env.BASE_URL + '/prelude7.mei')
       let mei = await response.text()
       const meiDoc = new DOMParser().parseFromString(mei, 'text/xml')
       addTenueInfo(meiDoc)
