@@ -78,7 +78,7 @@
                             <note xml:id="n1584hl3" dur="2" oct="3" pname="a" stem.dir="up" precedes="#nu7k179" />
                             <note xml:id="n1q51wea" dur="2" oct="3" pname="a" stem.dir="up" precedes="#nxdznpl" />
                             <space xml:id="s11yoecl" dur="2" />
-                            <note xml:id="n60kxyt" dur="2" oct="3" pname="a" stem.dir="up" />
+                            <note type="virtual" xml:id="n60kxyt" dur="2" oct="3" pname="a" stem.dir="up" />
                          </layer>
                         <layer type="sextus" n="5">
                            <note xml:id="nisk93t" dur="2" oct="3" pname="e" stem.dir="up" precedes="#n1584hl3" />
