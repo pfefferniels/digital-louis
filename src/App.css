@@ -1,8 +1,9 @@
-#svg5 {
+#svg1 {
   width: 100%;
 }
 
 .with-glow {
+  stroke-opacity: 1;
   filter: url(glow.svg#purple-glow);
 }
 

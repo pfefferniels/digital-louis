@@ -176,14 +176,14 @@
                         </layer>
 
                         <layer type="tenor" n="3">
-                           <space xml:id="note-4322371436" dur="2"/>
+                           <space dur="2"/>
                            <note stem.dir="down" xml:id="note-2026241016" dur="2" oct="3" pname="b" precedes="#note-0012154505">
                               <accid accid="f" />
                            </note>
 
-                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-0982348234" dur="4" oct="4" pname="d" />
-                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-1982348234" dur="4" oct="4" pname="c" />
-                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-2982348234" dur="4" oct="3" pname="b" />
+                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-0982348234" dur="4" oct="4" pname="d" precedes="#note-1982348234" />
+                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-1982348234" dur="4" oct="4" pname="c" precedes="#note-2982348234" />
+                           <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-2982348234" dur="4" oct="3" pname="b" precedes="#note-3982348234" />
                            <note stem.dir="down" type="ornam" grace="unknown" xml:id="note-3982348234" dur="4" oct="4" pname="c" />
                            <note stem.dir="down" xml:id="note-2022755449" dur="2" oct="3" pname="a" />
                            <note stem.dir="down" xml:id="note-3022755449" dur="2" oct="3" pname="a" />
@@ -191,8 +191,8 @@
                      </staff>
                      <staff n="2">
                         <layer type="quintus" n="4">
-                           <note stem.dir="up" xml:id="note-0322371436" dur="2" oct="3" pname="g" precedes="#grace-5691222786"/>
-                           <note stem.dir="up" xml:id="note-0012154505" dur="2" oct="3" pname="c" />
+                           <note stem.dir="up" xml:id="note-4322371436" dur="2" oct="3" pname="g" precedes="#grace-5691222786"/>
+                           <note stem.dir="up" xml:id="note-0012154505" dur="2" oct="3" pname="c" precedes="#note-0982348234" />
                            <note stem.dir="up" xml:id="note-0476666160" dur="2" oct="3" pname="c" />
                            <note stem.dir="up" xml:id="note-0990185349" dur="2" oct="3" pname="d" />
                         </layer>
