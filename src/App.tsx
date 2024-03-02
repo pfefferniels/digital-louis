@@ -159,6 +159,7 @@ function App() {
   }, [toolkit, modernClefs])
 
   useLayoutEffect(() => {
+    if (!encoding || !facsimile) return
     // once encoding and facsimile are 
     // loaded, connect them
     connectNotesToFacsimile()
