@@ -10,6 +10,7 @@ import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
 import { insertShadowSemibreves } from './utils/insertShadowSemibreves';
 import { displaceNotes } from './utils/displaceNotes';
+import { GlowDefs } from './GlowDefs';
 
 export const continuumLength = 300
 
@@ -174,6 +175,8 @@ function App() {
 
   return (
     <Grid container spacing={1}>
+      <GlowDefs />
+
       <Grid xs={6}>
         <Paper elevation={3}>
           <Box sx={{ width: 600, ml: 'auto', mr: 'auto' }}>

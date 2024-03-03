@@ -4,15 +4,15 @@
 
 .with-glow {
   stroke-opacity: 1;
-  filter: url(glow.svg#purple-glow);
+  filter: url(#purple-glow);
 }
 
 .notehead:hover {
-  filter: url(glow.svg#purple-glow);
+  filter: url(#purple-glow);
 }
 
 path:hover {
-  filter: url(glow.svg#purple-glow);
+  filter: url(#purple-glow);
 }
 
 .notehead:hover {
