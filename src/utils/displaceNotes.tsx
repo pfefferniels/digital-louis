@@ -1,5 +1,5 @@
 import { VerovioToolkit } from 'verovio/esm';
-import { shiftStemTo } from '../App';
+import { shiftStemTo } from '../Work';
 
 /**
  * Displaces notes in a verovio-rendered score

@@ -5,19 +5,24 @@
    <meiHead>
       <fileDesc>
          <titleStmt>
-            <title></title>
+            <title>Prélude 10</title>
             <respStmt />
          </titleStmt>
          <pubStmt>
             <date isodate="2021-04-08" type="encoding-date">2021-04-08</date>
+            <publisher>
+               <persName role="encoder">Niels Pfeffer</persName>
+            </publisher>
          </pubStmt>
          <sourceDesc>
-            <source n="1" xml:id="bauyn">
+            <source n="1" xml:id="bauyn" target='prelude10.svg' targettype='svg'>
                <bibl>
+                  Ms Bauyn
                </bibl>
             </source>
             <source n="2" xml:id="parville">
                <bibl>
+                  Ms Parville
                </bibl>
             </source>
          </sourceDesc>
@@ -52,7 +57,7 @@
                   <measure xml:id="m1" n="1">
                      <staff n="1">
                         <layer type="cantus" n="1">
-                           <note xml:id="note-0994714360" dur="2" oct="5" pname="e" corresp="#path1397 #path869" precedes="#note-1424254033"/>
+                           <note xml:id="note-0994714360" dur="2" oct="5" pname="e" corresp="#path1" precedes="#note-1424254033"/>
                            <note xml:id="note-1107613343" dur="2" oct="5" pname="d" corresp="#path1397-53 #path889" precedes="#note-2106458171"/>
                            <note xml:id="note-0414637111" dur="2" oct="5" pname="c" corresp="#path1397-4 #path895" precedes="#note-0145301355"/>
                            <note xml:id="note-0920412887" dur="4" oct="4" pname="b" corresp="#path1397-24 #path897" precedes="#note-0309941823">

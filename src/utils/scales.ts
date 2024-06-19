@@ -1,4 +1,4 @@
-import { continuumLength } from "../App";
+import { continuumLength } from '../Work';
 
 export function quadraticScale(x: number, maxVal: number = continuumLength): number {
     // Normalize x to the range [0, maxVal] then square and scale to [0, 1]
