@@ -14,7 +14,7 @@ export interface WorkInfo {
     encoder: string
 }
 
-const encodings = ['prelude7.mei', 'prelude10.mei']
+const encodings = ['prelude7.mei'/*, 'prelude10.mei'*/]
 
 export const Overview = () => {
     const [works, setWorks] = useState<WorkInfo[]>([])
