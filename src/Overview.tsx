@@ -1,9 +1,9 @@
-import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material"
+import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 interface SourceInfo {
-    siglum: string 
+    siglum: string
     svg: string | null
 }
 
@@ -47,28 +47,28 @@ export const Overview = () => {
     }, [])
 
     return (
-        <>
-        <Typography>Works</Typography>
+        <Box>
+            <Typography variant='h5'>Works</Typography>
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold'}}>Title</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold'}}>Sources</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold'}}>Encoder</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Sources</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Encoder</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                {works.map(work => {
-                    return (
-                        <TableRow key={`workItem_${work.id}`}>
-                            <TableCell><Link to={work.id}>{work.title}</Link></TableCell>
-                            <TableCell>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
-                            <TableCell>{work.encoder}</TableCell>
-                        </TableRow>
-                    )
-                })}
+                    {works.map(work => {
+                        return (
+                            <TableRow key={`workItem_${work.id}`}>
+                                <TableCell><Link to={work.id}>{work.title}</Link></TableCell>
+                                <TableCell>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
+                                <TableCell>{work.encoder}</TableCell>
+                            </TableRow>
+                        )
+                    })}
                 </TableBody>
             </Table>
-        </>
+        </Box>
     )
 }
