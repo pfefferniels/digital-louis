@@ -1,4 +1,3 @@
-import * as React from "react"
 import { SVGProps } from "react"
 
 const Logo = (props: SVGProps<SVGSVGElement>) => (
@@ -9,7 +8,6 @@ const Logo = (props: SVGProps<SVGSVGElement>) => (
     style={{
       clipRule: "evenodd",
       fillRule: "evenodd",
-      imageRendering: "optimizeQuality",
       shapeRendering: "geometricPrecision",
       textRendering: "geometricPrecision",
     }}
@@ -98,7 +96,6 @@ const Logo = (props: SVGProps<SVGSVGElement>) => (
         fontSize: "73.3333px",
         lineHeight: 1.25,
         fontFamily: "&quot",
-        InkscapeFontSpecification: "&quot",
       }}
     >
       <tspan
@@ -111,7 +108,6 @@ const Logo = (props: SVGProps<SVGSVGElement>) => (
           fontStretch: "normal",
           fontSize: "73.3333px",
           fontFamily: "Baskerville",
-          InkscapeFontSpecification: "Baskerville",
         }}
       >
         {"digital"}

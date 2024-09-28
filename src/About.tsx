@@ -3,7 +3,6 @@ import { Box, Typography } from "@mui/material"
 export const About = () => {
     return (
         <Box>
-            <Typography variant='h5'>About</Typography>
             <Typography variant='body1'>
                 How might a digital edition of Préludes non mesurés of Louis Couperin look like?
                 How can it make visible the path from the underlying harmonic framework to the
