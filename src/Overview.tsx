@@ -1,6 +1,8 @@
-import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material"
+import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import './Overview.css'
+import Logo from "./logo"
 
 interface SourceInfo {
     siglum: string
@@ -47,28 +49,32 @@ export const Overview = () => {
     }, [])
 
     return (
-        <Box>
-            <Typography variant='h5'>Works</Typography>
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Sources</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Encoder</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {works.map(work => {
-                        return (
-                            <TableRow key={`workItem_${work.id}`}>
-                                <TableCell><Link to={work.id}>{work.title}</Link></TableCell>
-                                <TableCell>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
-                                <TableCell>{work.encoder}</TableCell>
-                            </TableRow>
-                        )
-                    })}
-                </TableBody>
-            </Table>
-        </Box>
+        <>
+            <div className="header">
+                <Logo  />
+            </div>
+            <div className="worksList">
+                <Table>
+                    <TableHead>
+                        <TableRow >
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Title</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Sources</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Encoder</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {works.map(work => {
+                            return (
+                                <TableRow key={`workItem_${work.id}`}>
+                                    <TableCell sx={{ fontSize: '20px' }}><Link to={work.id}>{work.title}</Link></TableCell>
+                                    <TableCell sx={{ fontSize: '20px' }}>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
+                                    <TableCell sx={{ fontSize: '20px' }}>{work.encoder}</TableCell>
+                                </TableRow>
+                            )
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+        </>
     )
 }
