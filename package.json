@@ -19,7 +19,7 @@
     "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
     "uuid": "^9.0.1",
-    "verovio": "^4.0.1"
+    "verovio": "^4.3.1"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

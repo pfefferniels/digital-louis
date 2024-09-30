@@ -27,7 +27,7 @@ export const shiftStemTo = (path: Element, newX: number) => {
 }
 
 const addTenueInfo = (mei: Document) => {
-  const layerTypes = ['cantus', 'altus', 'tenor', 'quintus', 'bassus']
+  const layerTypes = ['cantus', 'altus', 'tenor', 'quintus', 'sextus', 'bassus']
   layerTypes.forEach(layerType => {
     [...mei.querySelectorAll(`layer[type='${layerType}']`)]
       .map(layer => [...layer.querySelectorAll('note,rest')])
@@ -152,12 +152,13 @@ const Work = ({ id }: WorkProps) => {
       mei = new XMLSerializer().serializeToString(meiDoc)
       toolkit.setOptions({
         adjustPageHeight: true,
-        adjustPageWidth: true,
+        //adjustPageWidth: true,
         svgHtml5: true,
         svgViewBox: true,
         spacingLinear: 0.05,
         spacingNonLinear: 1,
         svgAdditionalAttribute: ['note@corresp', 'note@precedes', 'note@next', 'slur@startid', 'tie@startid', 'tie@endid'],
+        breaks: 'encoded'
       })
       toolkit.loadData(mei)
       setEncoding(toolkit.renderToSVG(1))
