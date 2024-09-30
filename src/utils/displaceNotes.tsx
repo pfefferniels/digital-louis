@@ -148,7 +148,7 @@ function isOrnam(currentNote: Element) {
   return currentNote.getAttribute('class')?.split(' ').includes('ornam');
 }
 
-function processBuffer(buffer: Element[], currentNotes: (Element | null)[], currentNote: Element, displacement: number) {
+function processBuffer(buffer: Element[], nextNotes: (Element | null)[], currentNote: Element, displacement: number) {
   // Since not all at the same score time have the same horizontal
   // position, choose *one* x position as a common starting point.
   const startX = buffer
@@ -157,7 +157,7 @@ function processBuffer(buffer: Element[], currentNotes: (Element | null)[], curr
 
   const availableSpace = calculateAvailableSpace(
     buffer,
-    currentNotes as Element[],
+    nextNotes as Element[],
     currentNote,
     startX
   );
