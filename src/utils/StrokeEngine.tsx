@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import { quadraticScale } from "./scales"
 
 export interface ScoreNode extends d3.SimulationNodeDatum {
-    type: 'note' | 'start' | 'middle' | 'end',
+    type: 'note' | 'start' | 'middle1' | 'middle2' | 'end',
     id: string,
     x: number,
     y: number,
@@ -46,35 +46,43 @@ const determineNodes = (svgEl: SVGElement) => {
             id,
             x: startX,
             y: startY,
-            radius: isLiaison ? 10 : 150,
+            radius: isLiaison ? 10 : 200,
             isLiaison
         })
 
         // end points
         const targetBBox = (targetEl.querySelector('.notehead use') as SVGGraphicsElement).getBBox()
         const xDistance = (targetBBox.x - bbox.x)
-        const yDistance = (targetBBox.y - bbox.y)
-        const endX = targetBBox.x + (isLiaison ? -10 : -500)
-        const endY = isLiaison ? targetBBox.y - 10 : bbox.y + yDistance / 2 - 275
+        // const yDistance = (targetBBox.y - bbox.y)
+        const endX = isLiaison ? targetBBox.x - 10 : bbox.x + xDistance * 0.3
+        const endY = isLiaison ? targetBBox.y - 10 : startY - 420
         nodes.push({
             type: 'end',
             id,
             x: endX,
             y: endY,
-            radius: isLiaison ? 10 : 250,
+            radius: isLiaison ? 10 : 200,
             isLiaison
         })
 
         if (xDistance > 1600) {
             // middle points
             nodes.push({
-                type: 'middle',
+                type: 'middle1',
                 id,
-                x: startX + (endX - startX) / 2,
-                y: startY + (endY - startY) / 2,
-                radius: isLiaison ? 90 : Math.pow(xDistance / 4.5, 1 / 1.1),
+                x: startX + (endX - startX) * 0.33,
+                y: startY + (endY - startY) * 0.1,
+                radius: isLiaison ? 90 : Math.pow(xDistance / 9, 1 / 1.1),
                 isLiaison
             })
+            // nodes.push({
+            //     type: 'middle2',
+            //     id,
+            //     x: startX + (endX - startX) / 3,
+            //     y: startY + (endY - startY) / 3,
+            //     radius: isLiaison ? 90 : Math.pow(xDistance / 4.5, 1 / 1.1),
+            //     isLiaison
+            // })
         }
     }
 
@@ -86,9 +94,10 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
 
     const strengthes = {
         'note': 1,
-        'start': 0.95,
-        'middle': 0.35,
-        'end': 0.85
+        'start': 0.99,
+        'middle1': 0.1,
+        'middle2': 0.2,
+        'end': 0.95
     }
 
     return d3.forceSimulation(nodes)
@@ -99,14 +108,14 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                 if (d.isLiaison) {
                     return 12.5
                 }
-                else return strengthes[(d.type as 'note' | 'start' | 'middle' | 'end')]
+                else return strengthes[(d.type as 'note' | 'start' | 'middle1' | 'middle2' | 'end')]
             }))
         .force('y', d3.forceY()
             .y((d) => d.y!)
             .strength((datum: d3.SimulationNodeDatum) => {
                 const d = datum as ScoreNode
                 if (d.isLiaison) return 12.5
-                else return strengthes[(d.type as 'note' | 'start' | 'middle' | 'end')]
+                else return strengthes[(d.type as 'note' | 'start' | 'middle1' | 'middle2' | 'end')]
             }))
         .force('collision', d3.forceCollide().radius((datum: d3.SimulationNodeDatum) => {
             const d = datum as ScoreNode
@@ -132,7 +141,7 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                     else if (node.type === 'start') {
                         circle.setAttribute('fill', 'green')
                     }
-                    else if (node.type === 'middle') {
+                    else if (node.type === 'middle1' || node.type == 'middle2') {
                         circle.setAttribute('fill', 'blue')
                     }
                     else {
@@ -144,7 +153,8 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
 
             nodes.filter(node => node.type === 'start').forEach(startNode => {
                 const endNode = nodes.find(node => node.type === 'end' && node.id === startNode.id)
-                const middleNode = nodes.find(node => node.type === 'middle' && node.id === startNode.id)
+                const middleNode1 = nodes.find(node => node.type === 'middle1' && node.id === startNode.id)
+                // const middleNode2 = nodes.find(node => node.type === 'middle2' && node.id === startNode.id)
 
                 if (!endNode) return
 
@@ -152,7 +162,7 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                 if (!tenue) {
                     tenue = document.createElementNS('http://www.w3.org/2000/svg', 'path')
                     tenue.setAttribute('data-id', startNode.id)
-                    tenue.setAttribute('class', 'tenue')
+                    tenue.setAttribute('class', `tenue ${startNode.isLiaison ? 'liaison' : ''}`)
                     tenue.setAttribute('stroke-width', '5')
                     tenue.setAttribute('stroke', 'black')
                     tenue.setAttribute('fill', 'black')
@@ -168,10 +178,14 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                     const middleY = startNode.y < endNode.y ? startNode.y - 100 : endNode.y + 100
                     path = `M${startNode.x},${startNode.y} Q${middleX},${middleY} ${endNode.x},${endNode.y} Q${middleX},${middleY - 90} ${startNode.x},${startNode.y}`
                 }
-                else if (middleNode) {
+                else if (middleNode1) {
                     tenue.setAttribute('data-type', 'tenue')
                     // if the tenue is long and therefore has a middle node 
-                    path = `M${startNode.x},${startNode.y} Q${middleNode.x},${middleNode.y} ${endNode.x},${endNode.y} Q${middleNode.x},${middleNode.y - 80} ${startNode.x},${startNode.y}`
+                    path =
+                        `M${startNode.x},${startNode.y} ` +
+                        `Q${middleNode1.x},${middleNode1.y} ${endNode.x},${endNode.y} ` + 
+                        `Q${middleNode1.x},${middleNode1.y - 80} `+
+                        `${startNode.x},${startNode.y}`
                 }
                 else {
                     tenue.setAttribute('data-type', 'short-tenue')

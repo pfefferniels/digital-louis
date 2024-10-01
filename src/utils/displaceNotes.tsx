@@ -1,6 +1,29 @@
 import { VerovioToolkit } from 'verovio/esm';
 import { shiftStemTo } from '../Work';
 
+
+function redoBeams() {
+  const beams = document.querySelectorAll('.beam');
+  for (const beam of beams) {
+      // get the x's of the first and the last stem
+      const stems = beam.querySelectorAll('.note .stem path');
+      if (stems.length <= 1) continue;
+
+      const stem1 = stems[0];
+      const stem2 = stems[stems.length - 1];
+
+      const x1 = stem1.getAttribute('d')?.split(' ')[0].slice(1);
+      const x2 = stem2.getAttribute('d')?.split(' ')[0].slice(1);
+      // console.log('beam from', x1, 'to', x2)
+      const polygon = beam.querySelector('polygon');
+      const points = polygon?.getAttribute('points');
+      if (!points) continue;
+
+      const pointArr = points.split(' ').map(p => p.split(','));
+      polygon?.setAttribute('points', `${x1},${pointArr[0][1]} ${x2},${pointArr[1][1]} ${x2},${pointArr[2][1]} ${x1},${pointArr[3][1]}`);
+  }
+}
+
 const followNoteUntil = (note: Element, predicate: (el: Element) => boolean) => {
   let current = note;
   while (current) {
@@ -68,6 +91,11 @@ const calculateAvailableSpace = (buffer: Element[], nextNotes: Element[], curren
  * score notes with the same onset time
 ´ */
 export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => {
+  if (!toolkit) {
+    console.log('Toolkit not ready yet')
+    return
+  }
+
   let currentNotes = [document.querySelector(`.note[class*='entry']`)];
   if (!currentNotes.length || !currentNotes[0]) {
     console.log('no entry found');
@@ -117,31 +145,32 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
       return document.querySelector(`.note[data-id=${noteId.slice(1)}`);
     });
   }
+
+  redoBeams()
 }
 
 function calculateScoreTime(currentNote: Element, toolkit: VerovioToolkit) {
+  const getScoreOnsetTime = (noteId: string) => {
+    const times = toolkit.getTimesForElement(noteId).scoreTimeOnset as unknown as number[];
+    if (!times) return null;
+    return times[0];
+  }
+  
   const currentNoteId = currentNote?.getAttribute('data-id');
   if (!currentNoteId) return null
 
-  let scoreTime: number;
   if (isOrnam(currentNote)) {
     const nextNote = followNoteUntil(currentNote, el => !isOrnam(el));
-    console.log('next note following ornam=', nextNote);
 
     if (!nextNote) {
       return null;
     }
     else {
-      const times = toolkit.getTimesForElement(nextNote.getAttribute('data-id') || '').scoreTimeOnset as unknown as number[];
-      scoreTime = times[0];
-      console.log('new score time=', scoreTime);
+      return getScoreOnsetTime(nextNote.getAttribute('data-id') || '')
     }
-  } else {
-    const times = toolkit.getTimesForElement(currentNoteId).scoreTimeOnset as unknown as number[];
-    scoreTime = times[0];
-    console.log('old score time', scoreTime);
   }
-  return scoreTime;
+
+  return getScoreOnsetTime(currentNoteId)
 }
 
 function isOrnam(currentNote: Element) {
