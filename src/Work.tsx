@@ -71,10 +71,9 @@ const cloneDocument2 = (doc: Document) => {
 }
 
 const insertBeamedOrnaments = (meiDoc: Document) => {
-  const processBuffer = (notes: (Element | undefined | null)[]) => {
-    const goodNotes = notes.filter(note => !!note)
-    wrapAll(goodNotes, meiDoc.createElementNS('http://www.music-encoding.org/ns/mei', 'beam'))
-    goodNotes.forEach(note => {
+  const processBuffer = (notes: Element[]) => {
+    wrapAll(notes, meiDoc.createElementNS('http://www.music-encoding.org/ns/mei', 'beam'))
+    notes.forEach(note => {
       note.setAttribute('dur', '8')
     })
   }
