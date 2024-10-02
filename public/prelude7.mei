@@ -226,7 +226,7 @@
                            <note xml:id="ny5utrs" dur="2" oct="4" pname="f" stem.dir="up" accid="s" precedes="#n1wmgl3h" />
                         </layer>
                         <layer type="tenor" n="4">
-                           <note xml:id="n89n190" dur="2" oct="4" pname="e" />
+                           <note type="virtual" xml:id="n89n190" dur="2" oct="4" pname="e" />
                            <note xml:id="n29f2a5" dur="2" oct="4" pname="e" precedes="#n13jf0us" />
                            <note xml:id="n1fd4ip8" dur="2" oct="4" pname="e" stem.dir="down" precedes="#nz1xr86" />
 
@@ -280,7 +280,7 @@
                            <note type="ornam" xml:id="grace035" grace="unknown" dur="4" oct="4" pname="f" stem.dir="up" accid="s" precedes="#n1ohmj03" />
                            <note xml:id="n1ohmj03" dur="2" oct="4" pname="g" stem.dir="up" accid="s" precedes="#n1b9hj8n" />
 
-                           <note type="ornam" xml:id="grace039" grace="unknown" dur="4" oct="4" pname="g" stem.dir="up" accid="s" precedes="#grace040" />
+                           <note type="ornam" xml:id="grace039b" grace="unknown" dur="4" oct="4" pname="g" stem.dir="up" accid="s" precedes="#grace040" />
                            <note type="ornam" xml:id="grace040" grace="unknown" dur="4" oct="4" pname="g" stem.dir="up" accid="s" precedes="#nbtpmc7" />
                            <note xml:id="nbtpmc7" dur="4" oct="4" pname="a" stem.dir="up" precedes="#grace041" />
 
@@ -293,7 +293,7 @@
                         </layer>
                         <layer type="altus" n="3">
                            <note xml:id="n1b9hj8n" dur="2" oct="4" pname="e" stem.dir="up" precedes="#grace036" />
-                           <note xml:id="nj9t086" dur="4" oct="4" pname="e" stem.dir="up" precedes="#grace040" />
+                           <note xml:id="nj9t086" dur="4" oct="4" pname="e" stem.dir="up" precedes="#grace039b" />
 
                            <note type="ornam" xml:id="grace045" grace="unknown" dur="4" oct="4" pname="e" stem.dir="up" accid="s" precedes="#grace046" />
                            <note type="ornam" xml:id="grace046" grace="unknown" dur="4" oct="4" pname="e" stem.dir="up" accid="s" precedes="#n1nakz1l" />
