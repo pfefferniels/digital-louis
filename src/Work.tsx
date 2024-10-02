@@ -42,6 +42,25 @@ const wrapAll = (nodes: Element[], wrapper: Element) => {
   return wrapper;
 }
 
+const removeTiedNotes = (meiDoc: Document) => {
+  meiDoc.querySelectorAll('tie').forEach(tie => {
+    const endId = tie.getAttribute('endid')
+    if (!endId) return
+
+    const endNote = meiDoc.querySelector(`note[*|id="${endId.slice(1)}"]`)
+    if (!endNote) return
+
+    const dur = endNote.getAttribute('dur')
+    if (!dur) return
+
+    const space = document.createElementNS('http://www.music-encoding.org/ns/mei', 'space')
+    space.setAttribute('dur', dur)
+
+    endNote.parentNode?.replaceChild(space, endNote)
+    tie.remove()
+  })
+}
+
 // const cloneDocument = (doc: Document) => {
 //   return doc.cloneNode(true) as Document
 // }
@@ -264,7 +283,7 @@ const Work = ({ id }: WorkProps) => {
       svgViewBox: true,
       spacingLinear: 0.05,
       spacingNonLinear: 1,
-      svgAdditionalAttribute: ['note@corresp', 'note@precedes', 'note@next', 'slur@startid', 'tie@startid', 'tie@endid'],
+      svgAdditionalAttribute: ['note@corresp', 'note@precedes', 'note@next', 'slur@startid', 'tie@startid', 'tie@endid', 'note@stem.dir', 'staff@n', 'note@dur'],
       breaks: 'encoded'
     })
     toolkit.loadData(mei)
@@ -280,11 +299,16 @@ const Work = ({ id }: WorkProps) => {
   }, [scoreSVG, facsimile])
 
   useLayoutEffect(() => {
-    const showTenues = () => {
+    const showTenues = (tendency: 'up' | 'equal') => {
       if (!verovio.current) return
 
       hideTenues()
-      strokeSimulation.current = insertTenues(verovio.current.querySelector('svg') as SVGElement, position - 150)
+
+      strokeSimulation.current = insertTenues(
+        verovio.current.querySelector('svg') as SVGElement,
+        position - 150,
+        tendency
+      )
     }
 
     if (position === 300) {
@@ -296,7 +320,13 @@ const Work = ({ id }: WorkProps) => {
 
     if (position > 150) {
       displaceNotes(position - 150, toolkit!)
-      setTimeout(showTenues, 100)
+    }
+
+    if (position > 250) {
+      setTimeout(showTenues, 100, 'up')
+    }
+    else if (position > 200) {
+      setTimeout(showTenues, 100, 'equal')
     }
     else {
       hideTenues()
@@ -324,6 +354,7 @@ const Work = ({ id }: WorkProps) => {
           if (!prev) return
 
           insertBeamedOrnaments(prev);
+          removeTiedNotes(prev);
           return cloneDocument2(prev);
         })
       }
@@ -399,11 +430,11 @@ const Work = ({ id }: WorkProps) => {
                   },
                   {
                     value: 200,
-                    label: <span style={{ color: 'lightgray' }}>"jamais d'aplomb"</span>
+                    label: <span style={{ color: 'lightgray' }}>Jamais d'aplomb</span>
                   },
                   {
                     value: 250,
-                    label: <span style={{ color: 'lightgray' }}>Semi-mensuré</span>
+                    label: <span style={{ color: 'lightgray' }}>Semi-mesuré</span>
                   },
                   {
                     value: continuumLength,
