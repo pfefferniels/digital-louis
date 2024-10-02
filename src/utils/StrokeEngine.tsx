@@ -1,6 +1,5 @@
 import { v4 } from "uuid"
 import * as d3 from 'd3'
-import { quadraticScale } from "./scales"
 
 export interface ScoreNode extends d3.SimulationNodeDatum {
     type: 'note' | 'start' | 'middle1' | 'middle2' | 'end',
@@ -11,13 +10,22 @@ export interface ScoreNode extends d3.SimulationNodeDatum {
     isLiaison?: boolean
 }
 
-const determineNodes = (svgEl: SVGElement) => {
-    const notes = svgEl.querySelectorAll('*[data-next][data-precedes]')
+const determineBBox = (note: Element) => {
+    const notehead = note.querySelector('.notehead use') as SVGGraphicsElement
+    return notehead.getBBox()
+}
+
+const getNotesInChain = (svgEl: SVGElement) => {
+    return Array.from(svgEl.querySelectorAll('*[data-next][data-precedes]'))
+}
+
+const determineNodes = (svgEl: SVGElement, tendency: 'up' | 'equal') => {
+    const notes = getNotesInChain(svgEl)
 
     const nodes: ScoreNode[] = []
     for (const note of notes) {
         // in any case push the note itself
-        const bbox = (note.querySelector('.notehead use') as SVGGraphicsElement).getBBox()
+        const bbox = determineBBox(note)
         nodes.push({
             type: 'note',
             id: note.getAttribute('data-id') || 'unknown',
@@ -51,11 +59,22 @@ const determineNodes = (svgEl: SVGElement) => {
         })
 
         // end points
-        const targetBBox = (targetEl.querySelector('.notehead use') as SVGGraphicsElement).getBBox()
+        const targetBBox = determineBBox(targetEl)
         const xDistance = (targetBBox.x - bbox.x)
         // const yDistance = (targetBBox.y - bbox.y)
         const endX = isLiaison ? targetBBox.x - 10 : bbox.x + xDistance * 0.3
-        const endY = isLiaison ? targetBBox.y - 10 : startY - 420
+
+        let endY
+        if (isLiaison) {
+            endY = targetBBox.y - 5
+        }
+        else if (tendency === 'up') {
+            endY = targetBBox.y - 420
+        }
+        else {
+            endY = targetBBox.y
+        }
+
         nodes.push({
             type: 'end',
             id,
@@ -89,8 +108,67 @@ const determineNodes = (svgEl: SVGElement) => {
     return nodes
 }
 
-export const insertTenues = (svgEl: SVGElement, displacement: number) => {
-    const nodes = determineNodes(svgEl).slice(0)
+export const insertTenues = (
+    svgEl: SVGElement,
+    displacement: number,
+    tendency: 'up' | 'equal'
+) => {
+    if (tendency === 'equal') {
+        const notes = getNotesInChain(svgEl)
+        for (const note of notes) {
+            if (note.getAttribute('data-dur') === '8') continue
+
+            let stemDir = note.getAttribute('data-stem.dir')
+            if (!stemDir) {
+                const staff = note.closest('.staff') as SVGGElement | undefined
+                if (!staff) {
+                    stemDir = 'down'
+                }
+
+                const middleY = staff!.getBBox().y + staff!.getBBox().height / 2
+                const bbox = determineBBox(note)
+                stemDir = bbox.y < middleY ? 'up' : 'down'
+            }
+
+            const bbox = determineBBox(note)
+            const targetName = note.getAttribute('data-next')!
+            const targetEl = svgEl.querySelector(`[data-id='${targetName.slice(1)}']`)
+            if (!targetEl) continue
+
+            const targetBBox = determineBBox(targetEl)
+
+            const startX = bbox.x + 400
+            let endX = startX + (targetBBox.x - startX) * 0.33
+
+            if (endX < startX) {
+                endX = startX + 2000
+            }
+
+            const startY = bbox.y + 80
+            const endY = bbox.y + 80
+
+            let tenue = svgEl.querySelector(`[class*='tenue'][data-id='${note.getAttribute('data-id')}']`)
+            if (!tenue) {
+                tenue = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+                tenue.setAttribute('data-id', note.getAttribute('data-id')!)
+                tenue.setAttribute('class', `tenue`)
+                tenue.setAttribute('stroke-width', '5')
+                tenue.setAttribute('stroke', 'black')
+                tenue.setAttribute('fill', 'black')
+            }
+
+            // if the tenue is short but not a liaison, use a straight line
+            const middleX = startX + (endX - startX) / 2
+            const middleY = startY + (stemDir === 'up' ? -200 : 200)
+            const path = `M${startX},${startY} Q${middleX},${middleY} ${endX},${endY} Q${middleX},${middleY - 80} ${startX},${startY}`
+
+            tenue.setAttribute('d', path)
+            svgEl.querySelector('.page-margin')!.appendChild(tenue)
+        }
+        return
+    }
+
+    const nodes = determineNodes(svgEl, tendency).slice(0)
 
     const strengthes = {
         'note': 1,
@@ -167,7 +245,6 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                     tenue.setAttribute('stroke', 'black')
                     tenue.setAttribute('fill', 'black')
                     console.log('displacement=', displacement)
-                    tenue.setAttribute('opacity', quadraticScale(displacement, 200).toString())
                 }
 
                 let path
@@ -183,8 +260,8 @@ export const insertTenues = (svgEl: SVGElement, displacement: number) => {
                     // if the tenue is long and therefore has a middle node 
                     path =
                         `M${startNode.x},${startNode.y} ` +
-                        `Q${middleNode1.x},${middleNode1.y} ${endNode.x},${endNode.y} ` + 
-                        `Q${middleNode1.x},${middleNode1.y - 80} `+
+                        `Q${middleNode1.x},${middleNode1.y} ${endNode.x},${endNode.y} ` +
+                        `Q${middleNode1.x},${middleNode1.y - 80} ` +
                         `${startNode.x},${startNode.y}`
                 }
                 else {
