@@ -155,7 +155,7 @@
                      </staff>
                      <staff xml:id="sst7zag" n="2">
                         <layer type="quintus" n="7">
-                           <note xml:id="nyaehxq" dur="2" oct="3" pname="e" stem.dir="up" />
+                           <note type="virtual" xml:id="nyaehxq" dur="2" oct="3" pname="e" stem.dir="up" />
                            <note xml:id="n1hgqcma" dur="2" oct="3" pname="e" stem.dir="up" />
                            <note xml:id="n19jb9wb" dur="1" oct="3" pname="g" accid="n" precedes="#n10ppn83" />
                         </layer>
@@ -210,14 +210,14 @@
                   <measure n="3">
                      <staff n="1">
                         <layer type="cantus" n="1">
-                           <note type="virtual" xml:id="nph3b6e" dur="2" oct="5" pname="d" cue="true" stem.dir="down" />
+                           <note type="virtual" xml:id="nph3b6e" dur="2" oct="5" pname="d" cue="true" stem.dir="up" />
 
                            <note type="ornam" xml:id="grace028" grace="unknown" dur="4" oct="4" pname="g" stem.dir="up" precedes="#grace029" />
                            <note type="ornam" xml:id="grace029" grace="unknown" dur="4" oct="4" pname="a" stem.dir="up" precedes="#grace030" />
                            <note type="ornam" xml:id="grace030" grace="unknown" dur="4" oct="4" pname="b" stem.dir="up" precedes="#nxy3ry2" />
                            <note xml:id="nk8a4t7" dur="2" oct="5" pname="c" stem.dir="up" precedes="#n29f2a5" />
-                           <note xml:id="nt7p0ug" dur="2" oct="5" pname="c" stem.dir="down" precedes="#grace031" />
-                           <note xml:id="n1wmgl3h" dur="2" oct="4" pname="b" stem.dir="down" precedes="#n1x7yxv7" />
+                           <note xml:id="nt7p0ug" dur="2" oct="5" pname="c" stem.dir="up" precedes="#grace031" />
+                           <note xml:id="n1wmgl3h" dur="2" oct="4" pname="b" stem.dir="up" precedes="#n1x7yxv7" />
                         </layer>
                         <layer type="altus" n="3">
                            <note type="virtual" xml:id="n1mypt7e" dur="2" oct="4" pname="g" stem.dir="up" />
