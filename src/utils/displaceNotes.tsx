@@ -5,22 +5,22 @@ import { shiftStemTo } from '../Work';
 function redoBeams() {
   const beams = document.querySelectorAll('.beam');
   for (const beam of beams) {
-      // get the x's of the first and the last stem
-      const stems = beam.querySelectorAll('.note .stem path');
-      if (stems.length <= 1) continue;
+    // get the x's of the first and the last stem
+    const stems = beam.querySelectorAll('.note .stem path');
+    if (stems.length <= 1) continue;
 
-      const stem1 = stems[0];
-      const stem2 = stems[stems.length - 1];
+    const stem1 = stems[0];
+    const stem2 = stems[stems.length - 1];
 
-      const x1 = stem1.getAttribute('d')?.split(' ')[0].slice(1);
-      const x2 = stem2.getAttribute('d')?.split(' ')[0].slice(1);
-      // console.log('beam from', x1, 'to', x2)
-      const polygon = beam.querySelector('polygon');
-      const points = polygon?.getAttribute('points');
-      if (!points) continue;
+    const x1 = stem1.getAttribute('d')?.split(' ')[0].slice(1);
+    const x2 = stem2.getAttribute('d')?.split(' ')[0].slice(1);
+    // console.log('beam from', x1, 'to', x2)
+    const polygon = beam.querySelector('polygon');
+    const points = polygon?.getAttribute('points');
+    if (!points) continue;
 
-      const pointArr = points.split(' ').map(p => p.split(','));
-      polygon?.setAttribute('points', `${x1},${pointArr[0][1]} ${x2},${pointArr[1][1]} ${x2},${pointArr[2][1]} ${x1},${pointArr[3][1]}`);
+    const pointArr = points.split(' ').map(p => p.split(','));
+    polygon?.setAttribute('points', `${x1},${pointArr[0][1]} ${x2},${pointArr[1][1]} ${x2},${pointArr[2][1]} ${x1},${pointArr[3][1]}`);
   }
 }
 
@@ -155,7 +155,7 @@ function calculateScoreTime(currentNote: Element, toolkit: VerovioToolkit) {
     if (!times) return null;
     return times[0];
   }
-  
+
   const currentNoteId = currentNote?.getAttribute('data-id');
   if (!currentNoteId) return null
 
