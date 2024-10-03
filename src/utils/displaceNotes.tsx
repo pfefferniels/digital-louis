@@ -184,14 +184,23 @@ function processBuffer(buffer: Element[], nextNotes: (Element | null)[], current
     .map(note => +(note.querySelector('use')?.getAttribute('x') ?? 0))
     .find(x => x !== 0) ?? 0;
 
-  const availableSpace = calculateAvailableSpace(
+  let availableSpace = calculateAvailableSpace(
     buffer,
     nextNotes as Element[],
     currentNote,
     startX
   );
 
-  const spacePerNote = availableSpace / buffer.length * (displacement / 150);
+  const notesWithAccid = buffer.filter(note => note.querySelector('.accid') !== null);
+  const spacePerAccid = 160;
+
+  if (notesWithAccid.length) {
+    availableSpace -= notesWithAccid.length * spacePerAccid;
+  }
+
+  const spacePerNote = Math.max(200, availableSpace / buffer.length * (displacement / 150));
+
+  let accidCount = 0;
   buffer.forEach((note, i) => {
     const use = note.querySelector('use');
     if (!use) return;
@@ -199,7 +208,12 @@ function processBuffer(buffer: Element[], nextNotes: (Element | null)[], current
     const myX = +(use.getAttribute('x') || 0);
     const startCompensation = startX - myX;
 
-    const newX = (myX + startCompensation + i * spacePerNote).toString();
+    if (note.querySelector('.accid')) {
+      accidCount += 1;
+    }
+    const space = i * spacePerNote + accidCount * spacePerAccid;
+
+    const newX = (myX + startCompensation + space).toString();
     use.setAttribute('x', newX);
 
     const accid = note.querySelector('.accid');
