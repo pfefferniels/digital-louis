@@ -44,6 +44,9 @@
          <mdiv xml:id="m1acgdka">
             <score xml:id="svuymwk">
                <scoreDef xml:id="sybxzjb">
+                  <pgHead>
+                     <rend halign="center" fontsize="large">Prélude de Mons. Couperin</rend>
+                  </pgHead>
                   <staffGrp xml:id="swmgqr3">
                      <staffGrp xml:id="s1xfzgvc">
                         <staffGrp xml:id="P1">
@@ -287,8 +290,8 @@
                            <note xml:id="n19jeb2t" dur="4" oct="4" pname="a" stem.dir="up" precedes="#grace047" />
                            <note xml:id="n13ajlr6" dur="2" oct="4" pname="a" stem.dir="up" precedes="#grace054" />
 
-                           <note type="ornam" xml:id="grace056" grace="unknown" dur="4" oct="4" pname="a" stem.dir="down" precedes="#grace057" />
-                           <note type="ornam" xml:id="grace057" grace="unknown" dur="4" oct="4" pname="a" stem.dir="down" precedes="#n1myxio" />
+                           <note type="ornam" xml:id="grace056" grace="unknown" dur="4" oct="4" pname="a" stem.dir="up" precedes="#grace057" />
+                           <note type="ornam" xml:id="grace057" grace="unknown" dur="4" oct="4" pname="a" stem.dir="up" precedes="#n1myxio" />
                            <note xml:id="n1myxio" dur="2" oct="4" pname="g" stem.dir="up" accid.ges="s" precedes="#n91rg9n" />
                         </layer>
                         <layer type="altus" n="3">
