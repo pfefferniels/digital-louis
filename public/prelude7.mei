@@ -115,13 +115,9 @@
                            <note xml:id="nqi192d" dur="2" oct="2" pname="a" stem.dir="down" precedes="#n1ppqvv5" corrsp="#path1397-0-9 #path24" />
                         </layer>
                      </staff>
-                     <bracketSpan type="cadence" staff="1" tstamp="7" tstamp2="1m+2" func="cadence" />
+                     <bracketSpan type="cadence" staff="1" tstamp="7" tstamp2="1m+3" func="cadence" />
                      <dir type="cadence" place="above" staff="1" tstamp="7">
-                        <rend fontstyle="normal">⇒ dominante</rend>
-                        <rend fontstyle="normal">
-                           <lb />
-                           (cadence imparfaite)
-                        </rend>
+                        <rend fontstyle="normal">cadentia minor (V)</rend>
                      </dir>
                      <harm place="below" staff="2" tstamp="5">
                         <fb>
@@ -202,11 +198,8 @@
                         </fb>
                      </harm>
                      <bracketSpan type="cadence" staff="1" tstamp="5" tstamp2="1m+2" func="cadence" />
-                     <dir type="cadence" place="above" staff="1" tstamp="6">
-                        <rend fontstyle="normal">⇒ mediante</rend>
-                        <rend fontstyle="normal">
-                           <lb />
-(cadence rompuë)</rend>
+                     <dir type="cadence" place="above" staff="1" tstamp="5">
+                        <rend fontstyle="normal">minima cantizans (III)</rend>
                      </dir>
                   </measure>
                   <sb />
@@ -350,11 +343,8 @@
                         </layer>
                      </staff>
                      <bracketSpan type="cadence" staff="1" tstamp="1" tstamp2="1m+5" func="cadence" />
-                     <dir type="cadence" place="above" staff="1" tstamp="7">
-                        <rend fontstyle="normal">⇒ tonique</rend>
-                        <rend fontstyle="normal">
-                           <lb />
-(cadence parfaite)</rend>
+                     <dir type="cadence" place="above" staff="1" tstamp="1">
+                        <rend fontstyle="normal">doppia (I)</rend>
                      </dir>
                      <harm place="below" staff="2" tstamp="1">
                         <fb>
@@ -391,7 +381,7 @@
                      <staff n="1">
                         <layer type="cantus" n="1">
                            <note xml:id="nlvd39u" dur="1" oct="4" pname="a" precedes="#n1gn5cn" />
-                           <note xml:id="n1ibm53" dur="1" oct="4" pname="a" />
+                           <note xml:id="n1ibm53" dur="1" oct="4" pname="a" precedes="#end" />
                         </layer>
                         <layer type="altus" n="2">
                            <note xml:id="n1y0e3qs" dur="1" oct="4" pname="e" stem.dir="up" precedes="#nlvd39u" />
