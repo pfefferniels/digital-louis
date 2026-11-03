@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Digital Louis</title>
+    <script>
+      // GitHub Pages serves files, not the app's routes: a link to a route lands here.
+      // Send it to the app with the route along, for index.html to put back.
+      {
+        const [site] = location.pathname.split('/').filter(segment => segment !== '')
+        const route = location.pathname + location.search + location.hash
+        location.replace(site ? `/${site}/?route=${encodeURIComponent(route)}` : '/')
+      }
+    </script>
+  </head>
+  <body></body>
+</html>

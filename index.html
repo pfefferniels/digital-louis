@@ -5,6 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Digital Louis</title>
+    <script>
+      // A link to a route that 404.html sent here: put the route back before the router reads it.
+      // Only paths of this site are taken, so the parameter cannot lead anywhere else.
+      {
+        const route = new URLSearchParams(location.search).get('route')
+        if (route && route.startsWith('/') && !route.startsWith('//')) history.replaceState(null, '', route)
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
