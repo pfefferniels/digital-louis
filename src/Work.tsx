@@ -1,8 +1,8 @@
-import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Stack, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Typography, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './App.css'
-import { prepare, PreparedScore, render } from './renderer';
+import { draw, Noteheads, prepare, PreparedScore } from './renderer';
 import { insertTenues, removeTenues } from './utils/tenues/dom';
 import { addTenueInfo } from './utils/addTenueInfo';
 import { changeVisibilities } from './utils/changeVisibilities';
@@ -10,7 +10,8 @@ import { modernizeClefs } from './utils/modernizeClefs';
 import { cloneDocument, insertBeamedOrnaments, removeTiedNotes } from './utils/meiTransforms';
 import { GlowDefs } from './GlowDefs';
 import { highlightOnHover, highlightOnTap } from './utils/highlightCounterparts';
-import { atRest, morph } from './utils/sourceMorph';
+import { atRest, morph, unmorph } from './utils/sourceMorph';
+import { crossfade, Snapshot, snapshot } from './utils/crossfade';
 
 export const continuumLength = 300
 
@@ -23,38 +24,52 @@ const continuumAt = (position: number) => Math.max(0, position - measured) / (co
 /** The distance between two marks of the slider */
 const step = 50
 
+/** The step before the end of the continuum, which beams the ornaments and leaves out the notes tied over */
+const semiMeasured = continuumLength - step
+
 /** The last step, past the end of the continuum: the source itself, into which the notes travel */
 const manuscript = continuumLength + step
 
-/** How long the notes take to travel into the source, or back, in milliseconds */
-const morphDuration = 2800
+/**
+ * How long the view takes from one step to the next, in milliseconds, by the
+ * lower of the two: the voices appear quickly, the notes take their time to
+ * move, and longest to travel into the source.
+ */
+const stepDuration = (from: number) => (from >= continuumLength ? 2800 : from >= measured ? 900 : 500)
 
-/** A value that follows its target at a constant speed, frame by frame, taking `duration` milliseconds from 0 to 1. */
-const useTween = (target: number, duration: number): number => {
-  const [value, setValue] = useState(target)
+/**
+ * The position of the slider the view shows: it follows the slider frame by
+ * frame, at the pace of each step it passes through, or at once if `animate`
+ * is false.
+ */
+const useShownPosition = (target: number, animate: boolean): number => {
+  const [shown, setShown] = useState(target)
   const current = useRef(target)
 
   useEffect(() => {
-    if (duration <= 0) {
+    if (!animate) {
       current.current = target
-      setValue(target)
+      setShown(target)
       return
     }
     let frame = 0
     let last: number | undefined
     const advance = (now: number) => {
-      const delta = last === undefined ? 0 : (now - last) / duration
+      const elapsed = last === undefined ? 0 : now - last
       last = now
-      const v = current.current
-      current.current = target > v ? Math.min(target, v + delta) : Math.max(target, v - delta)
-      setValue(current.current)
+      const at = current.current
+      const up = target > at
+      const from = up ? Math.floor(at / step) * step : Math.ceil(at / step) * step - step
+      const way = (elapsed / stepDuration(from)) * step
+      current.current = up ? Math.min(target, at + way) : Math.max(target, at - way)
+      setShown(current.current)
       if (current.current !== target) frame = requestAnimationFrame(advance)
     }
     frame = requestAnimationFrame(advance)
     return () => cancelAnimationFrame(frame)
-  }, [target, duration])
+  }, [target, animate])
 
-  return value
+  return shown
 }
 
 /** The room left and right of the slider, in spacing units, into which the labels at its ends reach */
@@ -97,9 +112,6 @@ const prepareView = (meiDoc: Document, options: ViewOptions): Prepared => {
   }
 }
 
-const showAll = (selector: string, shown: boolean) =>
-  document.querySelectorAll(selector).forEach(el => el.setAttribute('opacity', shown ? '1' : '0'))
-
 interface WorkProps {
   id: string
 }
@@ -111,22 +123,18 @@ const Work = ({ id }: WorkProps) => {
   const [svgFile, setSVGFile] = useState<string>()
 
   const [modernClefs, setModernClefs] = useState(false)
-  const [figuredBass, setFiguredBass] = useState(false)
-  const [cadences, setCadences] = useState(false)
 
   const [position, setPosition] = useState<number>(measured)
 
   const score = useRef<HTMLDivElement>(null)
+  const ghost = useRef<HTMLDivElement>(null)
   const facsimileView = useRef<HTMLDivElement>(null)
 
   // on a touch screen, a note is tapped rather than hovered over
   const touch = useMediaQuery('(hover: none)')
 
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const towardsSource = position === manuscript
-  const progress = useTween(towardsSource ? 1 : 0, reducedMotion ? 0 : morphDuration)
-  // into the source and back, the notes travel from the unmeasured view
-  const shown = towardsSource || progress > 0 ? continuumLength : position
+  const animate = !useMediaQuery('(prefers-reduced-motion: reduce)')
+  const shown = useShownPosition(position, animate)
 
   useEffect(() => {
     if (!svgFile) return
@@ -153,55 +161,81 @@ const Work = ({ id }: WorkProps) => {
     loadEncoding()
   }, [id])
 
-  const semiMeasured = shown === 250
-  const prepared = useMemo(
-    () => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured }),
-    [meiDoc, modernClefs, semiMeasured]
-  )
-  const t = continuumAt(shown)
-  // the unmeasured view writes every note alike, as the source does
-  const noteheads = shown === continuumLength ? 'unmeasured' : 'notated'
-  const scoreSVG = useMemo(
-    () => (prepared && 'score' in prepared ? render(prepared.score, t, { noteheads }) : undefined),
-    [prepared, t, noteheads]
-  )
-
-  useLayoutEffect(() => {
-    // once encoding and facsimile are loaded, connect them:
-    // by hovering with a mouse, by tapping on a touch screen
-    if (!scoreSVG || !facsimile || !score.current || !facsimileView.current) return
-    return (touch ? highlightOnTap : highlightOnHover)(score.current, facsimileView.current)
-  }, [scoreSVG, facsimile, touch])
-
-  useLayoutEffect(() => {
-    const svg = score.current?.querySelector('svg')
-    if (!svg) return
-
-    changeVisibilities(shown)
-    showAll('.fb', figuredBass)
-    showAll('.cadence', cadences)
-
-    // Both the semi-measured and the unmeasured view draw
-    // tenues following the practice of the Bauyn manuscript.
-    // They are fitted to the notes where they are engraved,
-    // even while the notes travel into the source.
-    if (shown > 200) {
-      const timer = setTimeout(() => atRest(svg, () => insertTenues(svg)), 100)
-      return () => clearTimeout(timer)
-    }
-    removeTenues(svg)
-  }, [scoreSVG, shown, figuredBass, cadences])
-
+  // before the score, whose way into the source needs the facsimile as fitted
   useLayoutEffect(() => {
     const svg = facsimileView.current?.querySelector('svg')
     if (svg) fitToContent(svg)
   }, [facsimile])
 
+  // Both readings are prepared at once, for the view to pass from one to the other without delay.
+  const regular = useMemo(() => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: false }), [meiDoc, modernClefs])
+  const semi = useMemo(() => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: true }), [meiDoc, modernClefs])
+
+  // What the view shows, at `shown`: the semi-measured reading only where the slider rests on it;
+  // after it, the staves closing up for the unmeasured noteheads, which are written from the end of
+  // the continuum on; and from there the way into the source.
+  const prepared = shown === semiMeasured ? semi : regular
+  const t = continuumAt(Math.min(shown, continuumLength))
+  const noteheads: Noteheads = shown >= continuumLength ? 'unmeasured' : 'notated'
+  const unmeasuredSpacing = Math.min(1, Math.max(0, (shown - semiMeasured) / step))
+  const intoSource = Math.min(1, Math.max(0, (shown - continuumLength) / step))
+
+  const drawn = useRef<{
+    readonly score: PreparedScore, readonly t: number, readonly noteheads: Noteheads, readonly unmeasuredSpacing: number
+  }>()
+
   useLayoutEffect(() => {
-    const svg = score.current?.querySelector('svg')
+    const host = score.current
+    if (!host) return
+    if (!prepared || 'error' in prepared) {
+      host.replaceChildren()
+      drawn.current = undefined
+      return
+    }
     const source = facsimileView.current?.querySelector('svg')
-    if (svg && source) morph(svg, source, progress)
-  }, [scoreSVG, facsimile, progress])
+
+    // The score is drawn anew only where what is drawn changes, frame by frame
+    // between the measured and the unmeasured view; the steps before only fade
+    // voices in and out, the way into the source only moves what is drawn.
+    let svg = host.querySelector('svg')
+    const last = drawn.current
+    let before: Snapshot | undefined
+    if (!svg || !last || last.score !== prepared.score || last.t !== t || last.noteheads !== noteheads || last.unmeasuredSpacing !== unmeasuredSpacing) {
+      // where the view changes what it draws, not only where, it passes from the one to the other
+      const changesWhat = last !== undefined && (last.score !== prepared.score || last.noteheads !== noteheads)
+      if (svg) {
+        unmorph(svg)
+        // (in the source, where the engraving is gone, there is nothing to pass between)
+        if (animate && changesWhat && intoSource === 0) before = snapshot(svg)
+        removeTenues(svg)
+      }
+      svg = draw(host, prepared.score, t, { noteheads, unmeasuredSpacing })
+      drawn.current = { score: prepared.score, t, noteheads, unmeasuredSpacing }
+    }
+
+    changeVisibilities(svg, shown)
+    if (before && ghost.current) crossfade(before, svg, ghost.current)
+    if (source) morph(svg, source, intoSource)
+  }, [prepared, t, noteheads, unmeasuredSpacing, shown, intoSource, facsimile, animate])
+
+  // Both the semi-measured and the unmeasured view draw tenues following the
+  // practice of the Bauyn manuscript, once the view has come to rest. They are
+  // fitted to the notes where they are engraved, even in the source.
+  const resting = shown === position
+  useEffect(() => {
+    const svg = score.current?.querySelector('svg')
+    if (!svg || !resting || shown <= measured + step) return
+    const timer = setTimeout(() => atRest(svg, () => insertTenues(svg)), 100)
+    return () => clearTimeout(timer)
+  }, [resting, shown, prepared])
+
+  useLayoutEffect(() => {
+    // once encoding and facsimile are loaded, connect them:
+    // by hovering with a mouse, by tapping on a touch screen
+    if (!facsimile || !score.current || !facsimileView.current) return
+    return (touch ? highlightOnTap : highlightOnHover)(score.current, facsimileView.current)
+  }, [facsimile, touch])
+
 
   const sourceName = meiDoc?.querySelector('source')?.textContent?.replace(/\s+/g, ' ').trim() || 'Manuscrit'
 
@@ -221,115 +255,113 @@ const Work = ({ id }: WorkProps) => {
     return () => view.removeEventListener('click', copyId)
   }, [facsimile, touch])
 
+  // While the view moves, frame by frame, the controls and the facsimile stay as they are.
+  const controls = useMemo(() => (
+    <>
+      <Box sx={{ px: sliderInset, pt: 1, pb: { xs: 2, sm: 1.5 } }}>
+        <Slider
+          min={0}
+          max={manuscript}
+          step={step}
+          sx={{
+            // Each label may take the room between two marks, and wraps where it needs more.
+            // Centred on their marks, the labels at the ends must not reach beyond the inset.
+            '& .MuiSlider-markLabel': {
+              width: `calc(100% * ${step / manuscript})`,
+              maxWidth: { xs: 2 * sliderInset.xs * 8, sm: 2 * sliderInset.sm * 8 },
+              whiteSpace: 'normal',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              fontSize: { xs: '0.7rem', sm: '0.875rem' }
+            }
+          }}
+          marks={
+            [
+              {
+                value: 0,
+                label: <span style={{ transform: 'rotate(90deg)', color: 'lightgray' }}>Papier</span>
+              },
+              {
+                value: 50,
+                label: <span style={{ color: 'lightgray' }}>Basse</span>
+              },
+              {
+                value: 100,
+                label: <span style={{ color: 'lightgray' }}>Basse + Chant</span>
+              },
+              {
+                value: 150,
+                label: <b>Mesuré</b>
+              },
+              {
+                value: 200,
+                label: <span style={{ color: 'lightgray' }}>Jamais d'aplomb</span>
+              },
+              {
+                value: 250,
+                label: <span style={{ color: 'lightgray' }}>Semi-mesuré</span>
+              },
+              {
+                value: continuumLength,
+                label: <b>Non mesuré</b>
+              },
+              {
+                value: manuscript,
+                label: <b>{sourceName}</b>
+              }
+            ]
+          }
+          value={position}
+          onChange={(_, newValue: number | number[]) => {
+            if (Array.isArray(newValue)) return
+            setPosition(newValue as number)
+          }}
+        />
+      </Box>
+      <FormGroup sx={{ px: 2 }}>
+        <FormControlLabel
+          control={<Checkbox
+            checked={modernClefs}
+            onChange={(_, checked) => setModernClefs(checked)} />}
+          label="Modern clefs" />
+      </FormGroup>
+    </>
+  ), [position, sourceName, modernClefs])
+
+  const facsimilePanel = useMemo(() => (
+    <Paper style={{ position: 'relative' }} elevation={3}>
+      <Typography sx={{ padding: 1 }}>
+        <i style={{ color: 'black' }}>
+          {touch
+            ? 'Tap a note to highlight its counterparts in the facsimile/score.'
+            : 'Hover over the notes to highlight their counterparts in the facsimile/score.'}
+        </i>
+      </Typography>
+
+      {facsimile
+        ? <div className='facsimile' ref={facsimileView} dangerouslySetInnerHTML={{ __html: facsimile }} />
+        : <CircularProgress />}
+    </Paper>
+  ), [facsimile, touch])
+
   return (
     <Grid container spacing={1}>
       <GlowDefs />
 
       <Grid xs={12} md={6}>
         <Paper elevation={3}>
-          <Box sx={{ px: sliderInset, pt: 1, pb: { xs: 2, sm: 1.5 } }}>
-            <Slider
-              min={0}
-              max={manuscript}
-              step={step}
-              sx={{
-                // Each label may take the room between two marks, and wraps where it needs more.
-                // Centred on their marks, the labels at the ends must not reach beyond the inset.
-                '& .MuiSlider-markLabel': {
-                  width: `calc(100% * ${step / manuscript})`,
-                  maxWidth: { xs: 2 * sliderInset.xs * 8, sm: 2 * sliderInset.sm * 8 },
-                  whiteSpace: 'normal',
-                  textAlign: 'center',
-                  lineHeight: 1.2,
-                  fontSize: { xs: '0.7rem', sm: '0.875rem' }
-                }
-              }}
-              marks={
-                [
-                  {
-                    value: 0,
-                    label: <span style={{ transform: 'rotate(90deg)', color: 'lightgray' }}>Papier</span>
-                  },
-                  {
-                    value: 50,
-                    label: <span style={{ color: 'lightgray' }}>Basse</span>
-                  },
-                  {
-                    value: 100,
-                    label: <span style={{ color: 'lightgray' }}>Basse + Chant</span>
-                  },
-                  {
-                    value: 150,
-                    label: <b>Mesuré</b>
-                  },
-                  {
-                    value: 200,
-                    label: <span style={{ color: 'lightgray' }}>Jamais d'aplomb</span>
-                  },
-                  {
-                    value: 250,
-                    label: <span style={{ color: 'lightgray' }}>Semi-mesuré</span>
-                  },
-                  {
-                    value: continuumLength,
-                    label: <b>Non mesuré</b>
-                  },
-                  {
-                    value: manuscript,
-                    label: <b>{sourceName}</b>
-                  }
-                ]
-              }
-              value={position}
-              onChange={(_, newValue: number | number[]) => {
-                if (Array.isArray(newValue)) return
-                setPosition(newValue as number)
-              }}
-            />
-          </Box>
-          <Stack px={2} columnGap={2} direction='row' flexWrap='wrap' useFlexGap>
-            <FormGroup>
-              <FormControlLabel
-                control={<Checkbox
-                  checked={modernClefs}
-                  onChange={(_, checked) => setModernClefs(checked)} />}
-                label="Modern clefs" />
-            </FormGroup>
-            <FormGroup>
-              <FormControlLabel
-                control={<Checkbox
-                  checked={figuredBass}
-                  onChange={(_, checked) => setFiguredBass(checked)} />}
-                label="Figured bass" />
-            </FormGroup>
-            <FormGroup>
-              <FormControlLabel
-                control={<Checkbox
-                  checked={cadences}
-                  onChange={(_, checked) => setCadences(checked)} />}
-                label="Cadences" />
-            </FormGroup>
-          </Stack>
+          {controls}
 
           {prepared && 'error' in prepared && <Alert severity='error'>{prepared.error}</Alert>}
-          {scoreSVG && <div id='score' ref={score} dangerouslySetInnerHTML={{ __html: scoreSVG }} />}
-
+          <Box sx={{ position: 'relative' }}>
+            {/* drawn by the effects above, not by React */}
+            <div id='score' ref={score} />
+            <div className='score-ghost' ref={ghost} />
+          </Box>
         </Paper>
       </Grid>
       <Grid xs={12} md={6}>
-        <Paper style={{ position: 'relative' }} elevation={3}>
-          <Typography sx={{ padding: 1 }}>
-            <i style={{ color: 'black' }}>
-              {touch
-                ? 'Tap a note to highlight its counterparts in the facsimile/score.'
-                : 'Hover over the notes to highlight their counterparts in the facsimile/score.'}
-            </i>
-          </Typography>
-
-          {facsimile
-            ? <div className='facsimile' ref={facsimileView} dangerouslySetInnerHTML={{ __html: facsimile }} />
-            : <CircularProgress />}
-        </Paper>
+        {facsimilePanel}
       </Grid>
     </Grid>
   )

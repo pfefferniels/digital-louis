@@ -55,7 +55,12 @@ facsimile linking work on it unchanged:
 `.ledgerLines`, `.tie`, `.trill`, `.mordent`, `.harm .fb`, `.dir`,
 `.bracketSpan`, `.barLine`, `.clef`, `.pgHead`; `data-id`, `data-corresp`,
 `data-precedes`, `data-next`. Glyphs are `<use xlink:href>` elements with
-`x`, `y`, `width` and `height`.
+`width` and `height`, each in a `<g transform="translate(x y)">` of its own,
+which a browser moves more cheaply than the `<use>` itself.
+
+For the frames of a transition, `draw(element, score, t)` puts the score into
+an element of the page and, from the second frame on, changes only what moved
+(`patch.ts`), rather than writing the whole SVG anew.
 
 ## The dialect
 

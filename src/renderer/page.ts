@@ -58,9 +58,18 @@ interface EngravedSystem {
     readonly box: Box
 }
 
-const engraveSystem = (
+/** A system engraved staff by staff, before the staves are stacked. */
+interface SystemParts {
+    readonly measures: readonly { readonly measure: number, readonly staves: readonly Group[] }[]
+    readonly controls: readonly StaffDrawing[]
+    /** what each staff takes up, with what is drawn about it */
+    readonly extents: readonly Box[]
+    readonly barlines: readonly number[]
+}
+
+const engraveParts = (
     analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions, noteheads: Noteheads
-): EngravedSystem => {
+): SystemParts => {
     const { score } = analysis
     const placed = new Map(analysis.heads.flatMap(head => {
         const slot = layout.slots.get(head.id)
@@ -104,43 +113,79 @@ const engraveSystem = (
         lineEnd: options.systemWidth,
     })
 
-    // Each staff goes as close below the one above as what both take up allows.
     const extents = staffIndices.map(staff => controls
         .filter(control => control.staff === staff)
         .map(control => boundsOf(control.drawing))
         .filter(isDefined)
         .reduce(union, staffBoxes.get(staff) ?? emptyStaff))
-    const tops = [0, ...inclusiveScan(
-        adjacentPairs(extents),
-        (top, [above, below]) => top + Math.max(spacing.staves, above.bottom - below.top + spacing.clearance),
-        0
-    )]
-    const onStaff = ({ staff, drawing }: StaffDrawing) => translate(drawing, 0, tops[staff])
+    return { measures, controls, extents, barlines }
+}
 
+/** Each staff goes as close below the one above as what both take up allows. */
+const stack = (extents: readonly Box[]): number[] => [0, ...inclusiveScan(
+    adjacentPairs(extents),
+    (top, [above, below]) => top + Math.max(spacing.staves, above.bottom - below.top + spacing.clearance),
+    0
+)]
+
+const assemble = (analysis: Analysis, parts: SystemParts, tops: readonly number[]): Group => {
+    const { score } = analysis
+    const onStaff = ({ staff, drawing }: StaffDrawing) => translate(drawing, 0, tops[staff])
     const systemLine = line(
         { x: 0, y: tops[0] },
         { x: 0, y: tops[tops.length - 1] + 4 },
         engravingDefaults.thinBarlineThickness
     )
-    const drawing = group(['system'], [
+    return group(['system'], [
         systemLine,
-        ...measures.map(({ measure, staves }, k) => group(['measure'], [
+        ...parts.measures.map(({ measure, staves }, k) => group(['measure'], [
             ...staves.map((staff, s) => translate(staff, 0, tops[s])),
-            group(['barLine'], tops.flatMap(top => barlineLines(barlines[k], score.measures[measure].rightBarline, top))),
-            ...controls.filter(control => control.measure === measure).map(onStaff),
+            group(['barLine'], tops.flatMap(top => barlineLines(parts.barlines[k], score.measures[measure].rightBarline, top))),
+            ...parts.controls.filter(control => control.measure === measure).map(onStaff),
         ], { id: score.measures[measure].id })),
     ])
-    return { drawing, box: boundsOf(drawing) ?? emptyStaff }
+}
+
+const lerpBox = (a: Box, b: Box, t: number): Box => ({
+    left: lerp(a.left, b.left, t), top: lerp(a.top, b.top, t), right: lerp(a.right, b.right, t), bottom: lerp(a.bottom, b.bottom, t),
+})
+
+/**
+ * A system with its heads drawn as `noteheads` says, and its staves spaced
+ * `unmeasuredSpacing` of the way from as notated heads ask (0) to as
+ * unmeasured ones let them (1), which are without stems and take less room:
+ * the way the view closes up as it comes to the unmeasured notation.
+ */
+const engraveSystem = (
+    analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions,
+    noteheads: Noteheads, unmeasuredSpacing: number
+): EngravedSystem => {
+    const parts = engraveParts(analysis, layout, t, options, noteheads)
+    if (unmeasuredSpacing === (noteheads === 'unmeasured' ? 1 : 0)) {
+        const drawing = assemble(analysis, parts, stack(parts.extents))
+        return { drawing, box: boundsOf(drawing) ?? emptyStaff }
+    }
+    const other = engraveParts(analysis, layout, t, options, noteheads === 'unmeasured' ? 'notated' : 'unmeasured')
+    const [notated, unmeasured] = noteheads === 'unmeasured' ? [other, parts] : [parts, other]
+    const [notatedTops, unmeasuredTops] = [stack(notated.extents), stack(unmeasured.extents)]
+    const tops = notatedTops.map((top, i) => lerp(top, unmeasuredTops[i], unmeasuredSpacing))
+    // The system takes up room between what either kind of heads would, so that what follows moves on smoothly.
+    const boxOf = (system: SystemParts) => boundsOf(assemble(analysis, system, tops)) ?? emptyStaff
+    return {
+        drawing: assemble(analysis, parts, tops),
+        box: lerpBox(boxOf(notated), boxOf(unmeasured), unmeasuredSpacing),
+    }
 }
 
 export const engravePage = (
-    analysis: Analysis, layouts: readonly SystemLayout[], t: number, options: PageOptions, noteheads: Noteheads
+    analysis: Analysis, layouts: readonly SystemLayout[], t: number, options: PageOptions, noteheads: Noteheads,
+    unmeasuredSpacing = noteheads === 'unmeasured' ? 1 : 0
 ): Page => {
     const { title } = analysis.score
     const heading = title === undefined ? [] : [
         group(['pgHead'], [text({ x: options.systemWidth / 2, y: spacing.title }, title, spacing.title, 'middle')]),
     ]
-    const systems = layouts.map(layout => engraveSystem(analysis, layout, t, options, noteheads))
+    const systems = layouts.map(layout => engraveSystem(analysis, layout, t, options, noteheads, unmeasuredSpacing))
     const heightOf = (box: Box) => box.bottom - box.top
     const tops = exclusiveScan(
         systems,
