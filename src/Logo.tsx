@@ -5,6 +5,7 @@ const Logo = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width={464}
     height={197.754}
+    viewBox="0 0 464 197.754"
     style={{
       clipRule: "evenodd",
       fillRule: "evenodd",

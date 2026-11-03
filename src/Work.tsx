@@ -1,4 +1,4 @@
-import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Stack, Typography } from '@mui/material';
+import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Stack, Typography, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './App.css'
@@ -9,6 +9,7 @@ import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
 import { cloneDocument, insertBeamedOrnaments, removeTiedNotes } from './utils/meiTransforms';
 import { GlowDefs } from './GlowDefs';
+import { highlightOnTap } from './utils/tapToHighlight';
 
 export const continuumLength = 300
 
@@ -17,6 +18,24 @@ const measured = 150
 
 /** How far a slider position has gone from the measured reading towards the reading order of the source. */
 const continuumAt = (position: number) => Math.max(0, position - measured) / (continuumLength - measured)
+
+/** The distance between two marks of the slider */
+const step = 50
+
+/** The room left and right of the slider, in spacing units, into which the labels at its ends reach */
+const sliderInset = { xs: 4, sm: 6 }
+
+/**
+ * Lets the facsimile, drawn in Inkscape at a size in millimetres, take the width it is
+ * given: its view box becomes what it draws, and its height follows from its width.
+ */
+const fitToContent = (svg: SVGSVGElement) => {
+  const { x, y, width, height } = svg.getBBox()
+  if (width === 0 || height === 0) return
+  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`)
+  svg.removeAttribute('width')
+  svg.removeAttribute('height')
+}
 
 const connectNotesToFacsimile = () => {
   const notes = document.querySelectorAll('.note[data-corresp]')
@@ -102,6 +121,10 @@ const Work = ({ id }: WorkProps) => {
   const [position, setPosition] = useState<number>(measured)
 
   const score = useRef<HTMLDivElement>(null)
+  const facsimileView = useRef<HTMLDivElement>(null)
+
+  // on a touch screen, a note is tapped rather than hovered over
+  const touch = useMediaQuery('(hover: none)')
 
   useEffect(() => {
     if (!svgFile) return
@@ -145,9 +168,14 @@ const Work = ({ id }: WorkProps) => {
     if (!scoreSVG || !facsimile) return
 
     // once encoding and facsimile are
-    // loaded, connect them
-    connectNotesToFacsimile()
-  }, [scoreSVG, facsimile])
+    // loaded, connect them: by hovering
+    // with a mouse, by tapping on a touch screen
+    if (!touch) {
+      connectNotesToFacsimile()
+      return
+    }
+    if (score.current && facsimileView.current) return highlightOnTap(score.current, facsimileView.current)
+  }, [scoreSVG, facsimile, touch])
 
   useLayoutEffect(() => {
     const svg = score.current?.querySelector('svg')
@@ -167,6 +195,15 @@ const Work = ({ id }: WorkProps) => {
   }, [scoreSVG, position, figuredBass, cadences])
 
   useLayoutEffect(() => {
+    const svg = facsimileView.current?.querySelector('svg')
+    if (svg) fitToContent(svg)
+  }, [facsimile])
+
+  useLayoutEffect(() => {
+    // An aid for the editors, who work with a mouse. On a touch screen,
+    // a tap is only to highlight a note, not to fill the clipboard.
+    if (!window.matchMedia('(hover: hover)').matches) return
+
     document.querySelectorAll('#svg1 path').forEach(el => {
       (el as SVGElement).addEventListener('click', () => {
         navigator.clipboard.writeText('#' + el.getAttribute('id') || 'unknown')
@@ -178,13 +215,25 @@ const Work = ({ id }: WorkProps) => {
     <Grid container spacing={1}>
       <GlowDefs />
 
-      <Grid xs={6}>
+      <Grid xs={12} md={6}>
         <Paper elevation={3}>
-          <Box sx={{ width: 600, ml: 'auto', mr: 'auto' }}>
+          <Box sx={{ px: sliderInset, pt: 1, pb: { xs: 2, sm: 1.5 } }}>
             <Slider
               min={0}
               max={continuumLength}
-              step={50}
+              step={step}
+              sx={{
+                // Each label may take the room between two marks, and wraps where it needs more.
+                // Centred on their marks, the labels at the ends must not reach beyond the inset.
+                '& .MuiSlider-markLabel': {
+                  width: `calc(100% * ${step / continuumLength})`,
+                  maxWidth: { xs: 2 * sliderInset.xs * 8, sm: 2 * sliderInset.sm * 8 },
+                  whiteSpace: 'normal',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  fontSize: { xs: '0.7rem', sm: '0.875rem' }
+                }
+              }}
               marks={
                 [
                   {
@@ -224,7 +273,7 @@ const Work = ({ id }: WorkProps) => {
               }}
             />
           </Box>
-          <Stack pl={2} spacing={2} direction='row'>
+          <Stack px={2} columnGap={2} direction='row' flexWrap='wrap' useFlexGap>
             <FormGroup>
               <FormControlLabel
                 control={<Checkbox
@@ -253,16 +302,18 @@ const Work = ({ id }: WorkProps) => {
 
         </Paper>
       </Grid>
-      <Grid xs={6}>
+      <Grid xs={12} md={6}>
         <Paper style={{ position: 'relative' }} elevation={3}>
           <Typography sx={{ padding: 1 }}>
             <i style={{ color: 'black' }}>
-              Hover over the notes to highlight their counterparts in the facsimile/score.
+              {touch
+                ? 'Tap a note to highlight its counterparts in the facsimile/score.'
+                : 'Hover over the notes to highlight their counterparts in the facsimile/score.'}
             </i>
           </Typography>
 
           {facsimile
-            ? <div dangerouslySetInnerHTML={{ __html: facsimile }} />
+            ? <div className='facsimile' ref={facsimileView} dangerouslySetInnerHTML={{ __html: facsimile }} />
             : <CircularProgress />}
         </Paper>
       </Grid>

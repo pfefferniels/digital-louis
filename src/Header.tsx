@@ -1,31 +1,38 @@
+import { Box } from "@mui/material"
 import Logo from "./Logo"
 
 export const Header = () => {
     return (
-        <div style={{
-            margin: '1rem',
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            mx: { xs: 0, sm: 2 },
+            my: 2,
+            p: 2,
             borderRadius: '10px',
-            padding: '1rem',
             background: 'rgba(255, 255, 255, 0.8)',
             boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)'
         }}>
-            <>
-                <div style={{ height: '110px', position: 'sticky' }}>
-                    <div className="logo" style={{ height: '110px', width: '190px', float: 'left', borderRight: '1px solid black' }}>
-                        <Logo style={{ transform: "scale(0.4)", transformOrigin: 'top left' }} />
-                    </div>
-                    <div style={{ fontFamily: 'sans-serif', fontSize: '1.2em', height: '110px', width: '200px', float: 'left', marginLeft: '1rem', marginTop: '1rem', lineHeight: '1.2' }}>
-                        Digital Edition of the Préludes non mesurés of Louis Couperin
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        fontSize: '1.2em',
-                        fontFamily: "sans-serif"
-                    }}>
-                </div>
-            </>
-        </div>
+            <Box className="logo" sx={{
+                flexShrink: 0,
+                width: { xs: 126, sm: 186 },
+                minHeight: { sm: 110 },
+                pr: { xs: 1, sm: 0.5 },
+                borderRight: '1px solid black',
+                '& svg': { display: 'block', width: '100%', height: 'auto' }
+            }}>
+                <Logo />
+            </Box>
+            <Box sx={{
+                fontFamily: 'sans-serif',
+                fontSize: { xs: '1rem', sm: '1.2em' },
+                lineHeight: 1.2,
+                maxWidth: 200,
+                ml: { xs: 1.5, sm: 2 },
+                mt: { xs: 0.5, sm: 2 }
+            }}>
+                Digital Edition of the Préludes non mesurés of Louis Couperin
+            </Box>
+        </Box>
     )
 }

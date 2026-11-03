@@ -1,5 +1,9 @@
-#svg1 {
+/* score and facsimile take the width of their panel, and as much height as that asks */
+#score svg,
+.facsimile svg {
+  display: block;
   width: 100%;
+  height: auto;
 }
 
 .with-glow {
@@ -7,22 +11,31 @@
   filter: url(#purple-glow);
 }
 
-.notehead:hover {
-  filter: url(#purple-glow);
+/* where there is no mouse, a hover would only stick to whatever was tapped last */
+@media (hover: hover) {
+  .notehead:hover {
+    filter: url(#purple-glow);
+  }
+
+  path:hover {
+    filter: url(#purple-glow);
+  }
+
+  .notehead:hover {
+    opacity: 1;
+    fill: darkred;
+    cursor: pointer;
+    stroke-width: 2;
+  }
+
+  .notehead path:hover {
+    stroke-width: 2;
+  }
 }
 
-path:hover {
-  filter: url(#purple-glow);
-}
-
-.notehead:hover {
-  opacity: 1;
+/* the note tapped on a touch screen, or the notes of the trace tapped in the facsimile */
+.notehead.selected {
   fill: darkred;
-  cursor: pointer;
-  stroke-width: 2;
-}
-
-.notehead path:hover {
-  stroke-width: 2;
+  filter: url(#score-glow);
 }
 
