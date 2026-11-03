@@ -66,9 +66,9 @@ Results at the time of writing (mean error, staff spaces):
 
 | setting                                    | straight stroke | learned prior | full engine |
 | ------------------------------------------ | --------------- | ------------- | ----------- |
-| both preludes (in-sample)                  | 1.39            | 1.28          | 1.20        |
-| fit on Prélude 7, tested on Prélude 10     | 1.57            | 1.54          | 1.43 (in-sample: 1.43) |
-| fit on Prélude 10, tested on Prélude 7     | 1.34            | 1.28          | 1.19 (in-sample: 1.08) |
+| both preludes (in-sample, 132 tenues)      | 1.40            | 1.29          | 1.21        |
+| fit on Prélude 7, tested on Prélude 10     | 1.53            | 1.49          | 1.41 (in-sample: 1.37) |
+| fit on Prélude 10, tested on Prélude 7     | 1.37            | 1.22          | 1.11 (in-sample: 1.08) |
 
 A large part of the remaining error is the copyist's free hand: start point
 (±1 space) and rise (±1.7 spaces) vary a lot even in identical contexts, so
