@@ -4,7 +4,7 @@
  * puts it (the unmeasured layout). The views in between blend the two.
  */
 import { exclusiveScan, groupBy, inclusiveScan, isDefined, mean, partitionPoint, splitGreedily, sum } from './algorithms'
-import type { Analysis, Head } from './analysis'
+import { Analysis, asUnmeasured, Head } from './analysis'
 import { unionAll } from './geometry'
 import { glyphBox } from './glyph'
 import type { ElementId } from './model'
@@ -182,8 +182,9 @@ const measuredPlaces = (analysis: Analysis, measure: number, heads: readonly Hea
 
 /**
  * The reading layout has a place for each step at which the source reads the
- * measure's notes. A change of clef or key leads into the first note read under
- * it; one under which nothing in the measure is read stands before the barline.
+ * measure's notes, with room for the heads of unmeasured notation. A change of
+ * clef or key leads into the first note read under it; one under which nothing
+ * in the measure is read stands before the barline.
  */
 const readingPlaces = (analysis: Analysis, measure: number, heads: readonly Head[], marks: readonly number[]): Place[] => {
     const read = heads.flatMap(head => (head.kind === 'note' && head.step !== undefined ? [{ head, step: head.step }] : []))
@@ -194,7 +195,7 @@ const readingPlaces = (analysis: Analysis, measure: number, heads: readonly Head
         return step === undefined ? first === undefined || !readSteps.has(first) : first === step
     }
     const onStaff = (staffHeads: readonly Head[], staffMarks: readonly number[]) =>
-        leadInto(analysis, placeCluster(staffHeads), staffMarks.map(markAt))
+        leadInto(analysis, placeCluster(staffHeads.map(asUnmeasured)), staffMarks.map(markAt))
     const placeAt = (step: number | undefined, group: readonly Head[], along: number): Place => ({
         measure,
         along,

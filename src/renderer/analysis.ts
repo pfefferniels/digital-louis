@@ -54,6 +54,8 @@ interface Placement {
     readonly graceRank: number
     readonly position: StaffPosition
     readonly scale: number
+    /** the augmentation dots drawn after the head */
+    readonly dots: number
 }
 
 export interface NoteHead extends Placement {
@@ -187,9 +189,9 @@ const analyseStaff = (context: StaffContext, layers: readonly TimedLayer[]) => {
 
     const heads = layers.flatMap(({ layer, events }) => events.flatMap((timed): Head[] => {
         const { event } = timed
-        const placement = (id: ElementId, position: StaffPosition, scale: number): Placement => ({
+        const placement = (id: ElementId, position: StaffPosition, scale: number, dots: number): Placement => ({
             id, staff: context.staff, measure: context.measure, layer,
-            onset: timed.onset, graceRank: timed.graceRank, position, scale,
+            onset: timed.onset, graceRank: timed.graceRank, position, scale, dots,
         })
         switch (event.kind) {
             case 'space':
@@ -198,7 +200,7 @@ const analyseStaff = (context: StaffContext, layers: readonly TimedLayer[]) => {
                 const byVoice = directionByVoice(timed, layer, othersThan(layer))
                 const offset = byVoice === 'up' ? 2 : byVoice === 'down' ? -2 : 0
                 return [{
-                    ...placement(event.id, restPositions[event.duration.value] + offset, 1),
+                    ...placement(event.id, restPositions[event.duration.value] + offset, 1, event.duration.dots),
                     kind: 'rest', rest: event, glyph: rests[event.duration.value],
                 }]
             }
@@ -214,7 +216,7 @@ const analyseStaff = (context: StaffContext, layers: readonly TimedLayer[]) => {
                         ?? directionByPitch(notes.map(position))
                     : undefined
                 return notes.map(note => ({
-                    ...placement(note.id, position(note), note.grace || note.cue ? cueScale : 1),
+                    ...placement(note.id, position(note), note.grace || note.cue ? cueScale : 1, note.duration.dots),
                     kind: 'note',
                     note,
                     chord: event.kind === 'chord' ? event : undefined,
@@ -267,6 +269,16 @@ const marksOf = (timeline: StaffTimeline, staff: number, firstSteps: ReadonlyMap
         atMeasureStart: change.moment.within === undefined,
         firstStep: firstSteps.get(i),
     }))
+
+/**
+ * A head as unmeasured notation writes it, as the Bauyn manuscript does: every
+ * note, ornaments and long notes alike, a semibreve of one size, without stem,
+ * flag or dots - nothing that speaks of duration.
+ */
+export const asUnmeasured = (head: Head): Head =>
+    head.kind === 'note'
+        ? { ...head, glyph: 'noteheadWhole', scale: 1, stem: undefined, flagged: false, dots: 0 }
+        : head
 
 /** A chord whose tones the source reads one after another is rolled: it cannot share one stem. */
 export const isRolled = (tones: readonly NoteHead[]): boolean =>

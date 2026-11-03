@@ -17,9 +17,6 @@ const unit = 100
 /** The margin around the page, in staff spaces. */
 const margin = 2
 
-/** Shadow semibreves are cloned from the semibreve symbol, so it is always defined. */
-const alwaysDefined: readonly GlyphName[] = ['noteheadWhole']
-
 interface SvgElement {
     readonly name: string
     readonly attributes: Readonly<Record<string, string | number | undefined>>
@@ -112,7 +109,7 @@ const symbol = (name: GlyphName): SvgElement =>
     ])
 
 export const writeSvg = (page: Page): string => {
-    const used = [...new Set([...alwaysDefined, ...glyphsIn(page.content)])]
+    const used = [...new Set(glyphsIn(page.content))]
     return serialize(element('svg', {
         xmlns: 'http://www.w3.org/2000/svg',
         'xmlns:xlink': 'http://www.w3.org/1999/xlink',
