@@ -5,7 +5,4 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/digital-louis',
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ["verovio"],
-  }
 })

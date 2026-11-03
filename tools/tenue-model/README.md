@@ -42,7 +42,7 @@ of the Bauyn manuscript that are traced in the facsimile SVGs in `public/`.
    rising, thick when moving horizontally or downwards, tapering at the end.
 
 Nothing in the engine is specific to one prelude: it reads notes, staves and
-obstacles from any Verovio rendering. Fitting on one prelude and testing on
+obstacles from the rendered score. Fitting on one prelude and testing on
 the other gives errors comparable to the in-sample fit (see below).
 
 ## Usage

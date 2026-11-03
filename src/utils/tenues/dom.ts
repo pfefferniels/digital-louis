@@ -1,5 +1,5 @@
 /**
- * Bridge between the Verovio SVG and the tenue engine: collects notes,
+ * Bridge between the rendered score and the tenue engine: collects notes,
  * offsets and obstacles from the rendered score, runs the layout and
  * inserts the calligraphic tenues.
  */
@@ -47,6 +47,16 @@ const staffInfo = (staff: Element, unit: number): StaffInfo | undefined => {
         right: right / unit
     }
 }
+
+/**
+ * The staves right above and below a staff. A system holds one staff element
+ * per staff and measure, so neighbours are found by height, not by order:
+ * the staves of the other measures stand level with this one.
+ */
+const neighbours = (staves: StaffInfo[], staff: StaffInfo) => ({
+    above: staves.filter(s => s.bottom > staff.top).sort((a, b) => a.bottom - b.bottom)[0],
+    below: staves.filter(s => s.top < staff.bottom).sort((a, b) => b.top - a.top)[0]
+})
 
 const staffSpace = (svgEl: Element) => {
     for (const staff of Array.from(svgEl.querySelectorAll('.staff'))) {
@@ -183,9 +193,7 @@ export const insertTenues = (svgEl: SVGElement) => {
             const maxEnd = releasedBy ? staff.right - END_GAP : staff.right + MARGIN_REACH
             endX = Math.min(maxEnd, Math.max(endX, head.x1 + MIN_REACH))
 
-            const index = staves.indexOf(staff)
-            const above = staves[index - 1]
-            const below = staves[index + 1]
+            const { above, below } = neighbours(staves, staff)
             requests.push({
                 id,
                 head,
