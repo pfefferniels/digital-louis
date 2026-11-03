@@ -11,6 +11,18 @@
   filter: url(#purple-glow);
 }
 
+/*
+ * A note is hovered over wherever it is drawn: the staff lines across it let the
+ * pointer through, and a hollow head takes it in its middle too, where supported.
+ */
+#score .staff > path {
+  pointer-events: none;
+}
+
+#score .notehead use {
+  pointer-events: bounding-box;
+}
+
 /* where there is no mouse, a hover would only stick to whatever was tapped last */
 @media (hover: hover) {
   .notehead:hover {
@@ -39,3 +51,27 @@
   filter: url(#score-glow);
 }
 
+
+/*
+ * Travelling into the source: the engraving fades (--engraving), while the
+ * heads of the notes linked to the facsimile travel, and dissolve at last (--heads).
+ * What the view hides (opacity="0") stays hidden.
+ */
+#score svg[data-morph] :is(path, use, polygon, ellipse, text):not([opacity="0"]) {
+  opacity: var(--engraving);
+}
+
+#score svg[data-morph] .linked > .notehead > use {
+  opacity: var(--heads);
+}
+
+/* in the manuscript, the note hovered over or tapped shows the editors' reading of it */
+#score svg[data-morph] .linked > .notehead.selected > use {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  #score svg[data-morph] .linked > .notehead:hover > use {
+    opacity: 1;
+  }
+}
