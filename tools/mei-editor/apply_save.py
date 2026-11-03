@@ -200,7 +200,15 @@ def apply_svg(svg_text, traces, log):
         log.append(f'removed trace {pid}' if k else f'!! trace {pid} not found')
     new = []
     for pid, t in traces.get('added', {}).items():
-        if f'id="{pid}"' in svg_text:
+        m = re.search(r'<path\b[^>]*?\sid="%s"[^>]*?/>' % re.escape(pid), svg_text, flags=re.S)
+        if m:
+            # a trace already in the file: its shape was edited
+            tag = m.group(0)
+            old = re.search(r'\sd="([^"]*)"', tag)
+            if old and old.group(1) != t['d']:
+                tag2 = tag[:old.start(1)] + t['d'] + tag[old.end(1):]
+                svg_text = svg_text[:m.start()] + tag2 + svg_text[m.end():]
+                log.append(f'reshaped {t["kind"]} {pid}')
             continue
         extra = '\n         sodipodi:nodetypes="ccc"' if t['kind'] == 'head' else ''
         new.append(f'\n      <path\n         style="{TRACE_STYLE}"\n         d="{t["d"]}"\n         id="{pid}"{extra} />')
