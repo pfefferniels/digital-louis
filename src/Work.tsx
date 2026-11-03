@@ -1,153 +1,23 @@
-import { Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Stack, Typography } from '@mui/material';
+import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Stack, Typography } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2'
-import { loadVerovio } from './loadVerovio.mts'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { VerovioToolkit } from 'verovio/esm';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './App.css'
+import { prepare, PreparedScore, render } from './renderer';
 import { insertTenues, removeTenues } from './utils/tenues/dom';
 import { addTenueInfo } from './utils/addTenueInfo';
 import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
 import { insertShadowSemibreves } from './utils/insertShadowSemibreves';
-import { displaceNotes } from './utils/displaceNotes';
+import { cloneDocument, insertBeamedOrnaments, removeTiedNotes } from './utils/meiTransforms';
 import { GlowDefs } from './GlowDefs';
 
 export const continuumLength = 300
 
-// Wrap wrapper around nodes
-// Just pass a collection of nodes, and a wrapper element
-const wrapAll = (nodes: Element[], wrapper: Element) => {
-  if (nodes.length === 0) return;
+/** Where the slider shows the measured reading; from here to its end the notes move into the order of the source. */
+const measured = 150
 
-  // Cache the current parent and previous sibling of the first node.
-  const parent = nodes[0].parentNode;
-  const previousSibling = nodes[0].previousSibling;
-
-  // Place each node in wrapper.
-  //  - If nodes is an array, we must increment the index we grab from 
-  //    after each loop.
-  //  - If nodes is a NodeList, each node is automatically removed from 
-  //    the NodeList when it is removed from its parent with appendChild.
-  for (let i = 0; nodes.length - i; wrapper.firstChild === nodes[0] && i++) {
-    wrapper.appendChild(nodes[i]);
-  }
-
-  // Place the wrapper just after the cached previousSibling,
-  // or if that is null, just before the first child.
-  if (parent) {
-    const nextSibling = previousSibling ? previousSibling.nextSibling : parent.firstChild;
-    parent.insertBefore(wrapper, nextSibling);
-  }
-
-  return wrapper;
-}
-
-const removeTiedNotes = (meiDoc: Document) => {
-  meiDoc.querySelectorAll('tie').forEach(tie => {
-    const endId = tie.getAttribute('endid')
-    if (!endId) return
-
-    const endNote = meiDoc.querySelector(`note[*|id="${endId.slice(1)}"]`)
-    if (!endNote) return
-
-    const dur = endNote.getAttribute('dur')
-    if (!dur) return
-
-    const space = document.createElementNS('http://www.music-encoding.org/ns/mei', 'space')
-    space.setAttribute('dur', dur)
-
-    endNote.parentNode?.replaceChild(space, endNote)
-    tie.remove()
-  })
-}
-
-// const cloneDocument = (doc: Document) => {
-//   return doc.cloneNode(true) as Document
-// }
-
-const cloneDocument2 = (doc: Document) => {
-  const str = new XMLSerializer().serializeToString(doc)
-  return new DOMParser().parseFromString(str, 'text/xml')
-}
-
-const insertBeamedOrnaments = (meiDoc: Document) => {
-  const processBuffer = (buffer: Element[]) => {
-    // passing notes inside an encoded beam are beamed already
-    const notes = [...new Set(buffer)].filter(note => !note.closest('beam'))
-    if (!notes.length) return
-    const beam = meiDoc.createElementNS('http://www.music-encoding.org/ns/mei', 'beam')
-    beam.setAttribute('type', 'ornam-beam')
-    wrapAll(notes, beam)
-    notes.forEach(note => {
-      note.setAttribute('dur', '8')
-    })
-  }
-
-  const notes = Array.from(meiDoc.querySelectorAll('note[type="ornam"]'));
-
-  let buffer: Element[] = []
-
-  notes.forEach((note, index) => {
-    buffer.push(note)
-
-    if (index === notes.length - 1) {
-      processBuffer(buffer)
-      buffer = []
-      return
-    }
-
-    const precedesId = note.getAttribute('precedes')
-    if (!precedesId) {
-      processBuffer(buffer)
-      buffer = []
-      return
-    }
-
-    const precedesNote = meiDoc.querySelector(`note[*|id="${precedesId.slice(1)}"]`)
-    if (!precedesNote) {
-      processBuffer(buffer)
-      buffer = []
-      return
-    }
-
-    if (precedesNote === notes[index + 1]) {
-      buffer.push(precedesNote)
-    }
-    else {
-      processBuffer(buffer)
-      buffer = []
-    }
-  })
-}
-
-const removeBeamedOrnaments = (meiDoc: Document) => {
-  // only the beams added by insertBeamedOrnaments: encoded beams keep their notes
-  meiDoc.querySelectorAll('beam[type="ornam-beam"]').forEach(beam => {
-    const childNotes = beam.querySelectorAll('note[type="ornam"]');
-    if (childNotes.length === 0) return;
-
-    const parent = beam.parentNode;
-    if (!parent) return;
-
-    childNotes.forEach(child => {
-      child.setAttribute('dur', '4')
-      parent.insertBefore(child, beam)
-    });
-    parent.removeChild(beam);
-  });
-}
-
-export const shiftStemTo = (path: Element, newX: number) => {
-  const d = path.getAttribute('d')
-  if (!d) return
-  const points = d.split(' ')
-  const y1 = +points[1]
-  const y2 = +points[3]
-
-  const shift = +(path.getAttribute('data-shift-notehead') || 0)
-
-  path.setAttribute('d', `M${newX - shift} ${y1} L${newX - shift} ${y2}`)
-}
+/** How far a slider position has gone from the measured reading towards the reading order of the source. */
+const continuumAt = (position: number) => Math.max(0, position - measured) / (continuumLength - measured)
 
 const connectNotesToFacsimile = () => {
   const notes = document.querySelectorAll('.note[data-corresp]')
@@ -188,26 +58,40 @@ const connectNotesToFacsimile = () => {
   })
 }
 
-const addShiftInfo = () => {
-  document.querySelectorAll('.stem path, .accid path').forEach(el_ => {
-    const el = el_ as SVGGraphicsElement
-    const note = el.closest('.note')
-    if (!note) return
-    const notehead = note.querySelector('.notehead') as SVGGraphicsElement
-    const noteheadX = notehead.getBBox().x
-    const stemX = el.getBBox().x
-    el.setAttribute('data-shift-notehead', (noteheadX - stemX).toString())
-  })
+interface ViewOptions {
+  readonly modernClefs: boolean
+  /** the semi-measured view beams the ornaments and leaves out the notes tied over */
+  readonly semiMeasured: boolean
 }
+
+type Prepared = { readonly score: PreparedScore } | { readonly error: string }
+
+/** The score for a view of the encoding, which is left as it was loaded. */
+const prepareView = (meiDoc: Document, options: ViewOptions): Prepared => {
+  const doc = cloneDocument(meiDoc)
+  addTenueInfo(doc)
+  if (options.modernClefs) modernizeClefs(doc)
+  if (options.semiMeasured) {
+    insertBeamedOrnaments(doc)
+    removeTiedNotes(doc)
+  }
+  try {
+    return { score: prepare(doc) }
+  }
+  catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+const showAll = (selector: string, shown: boolean) =>
+  document.querySelectorAll(selector).forEach(el => el.setAttribute('opacity', shown ? '1' : '0'))
 
 interface WorkProps {
   id: string
 }
 
 const Work = ({ id }: WorkProps) => {
-  const [toolkit, setToolkit] = useState<VerovioToolkit>()
   const [meiDoc, setMeiDoc] = useState<Document>()
-  const [scoreSVG, setScoreSVG] = useState<string>()
 
   const [facsimile, setFacsimile] = useState<string>()
   const [svgFile, setSVGFile] = useState<string>()
@@ -216,17 +100,12 @@ const Work = ({ id }: WorkProps) => {
   const [figuredBass, setFiguredBass] = useState(false)
   const [cadences, setCadences] = useState(false)
 
-  const [position, setPosition] = useState<number>(150)
+  const [position, setPosition] = useState<number>(measured)
 
-  const verovio = useRef<HTMLDivElement>(null)
-
-  const hideTenues = () => {
-    if (!verovio.current) return
-    removeTenues(verovio.current.querySelector('svg') as SVGElement)
-  }
+  const score = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadVerovio().then((toolkit: VerovioToolkit) => setToolkit(toolkit))
+    if (!svgFile) return
 
     const loadFacsimile = async () => {
       const response = await fetch(import.meta.env.BASE_URL + '/' + svgFile)
@@ -237,8 +116,6 @@ const Work = ({ id }: WorkProps) => {
   }, [svgFile])
 
   useEffect(() => {
-    if (!toolkit) return
-
     const loadEncoding = async () => {
       const response = await fetch(import.meta.env.BASE_URL + '/' + id + '.mei')
       const mei = await response.text()
@@ -250,66 +127,44 @@ const Work = ({ id }: WorkProps) => {
     }
 
     loadEncoding()
-  }, [toolkit, modernClefs, id])
+  }, [id])
 
-  useEffect(() => {
-    if (!meiDoc || !toolkit) return
-
-    addTenueInfo(meiDoc)
-    if (modernClefs) modernizeClefs(meiDoc)
-
-    const mei = new XMLSerializer().serializeToString(meiDoc)
-    toolkit.setOptions({
-      // one tall page (Verovio's maximum height), trimmed to the content:
-      // the app renders and decorates a single SVG page
-      pageHeight: 60000,
-      adjustPageHeight: true,
-      svgHtml5: true,
-      svgViewBox: true,
-      spacingLinear: 0.05,
-      spacingNonLinear: 1,
-      svgAdditionalAttribute: ['note@corresp', 'note@precedes', 'note@next', 'slur@startid', 'tie@startid', 'tie@endid', 'note@stem.dir', 'staff@n', 'note@dur'],
-      breaks: 'encoded'
-    })
-    toolkit.loadData(mei)
-    setScoreSVG(toolkit.renderToSVG(1))
-  }, [meiDoc, modernClefs, toolkit])
+  const semiMeasured = position === 250
+  const prepared = useMemo(
+    () => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured }),
+    [meiDoc, modernClefs, semiMeasured]
+  )
+  const t = continuumAt(position)
+  const scoreSVG = useMemo(() => (prepared && 'score' in prepared ? render(prepared.score, t) : undefined), [prepared, t])
 
   useLayoutEffect(() => {
     if (!scoreSVG || !facsimile) return
 
-    // once encoding and facsimile are 
+    // once encoding and facsimile are
     // loaded, connect them
     connectNotesToFacsimile()
   }, [scoreSVG, facsimile])
 
   useLayoutEffect(() => {
-    // Both the semi-measured and the unmeasured view draw
-    // tenues following the practice of the Bauyn manuscript.
-    const showTenues = () => {
-      if (!verovio.current) return
-      insertTenues(verovio.current.querySelector('svg') as SVGElement)
-    }
+    const svg = score.current?.querySelector('svg')
+    if (!svg) return
 
-    if (position === 300) {
+    if (position === continuumLength) {
       insertShadowSemibreves()
     }
 
-    addShiftInfo()
     changeVisibilities(position)
+    showAll('.fb', figuredBass)
+    showAll('.cadence', cadences)
 
-    if (position > 150) {
-      displaceNotes(position - 150, toolkit!)
-    }
-
+    // Both the semi-measured and the unmeasured view draw
+    // tenues following the practice of the Bauyn manuscript.
     if (position > 200) {
-      setTimeout(showTenues, 100)
+      const timer = setTimeout(() => insertTenues(svg), 100)
+      return () => clearTimeout(timer)
     }
-    else {
-      hideTenues()
-    }
-
-  }, [scoreSVG, position, toolkit])
+    removeTenues(svg)
+  }, [scoreSVG, position, figuredBass, cadences])
 
   useLayoutEffect(() => {
     document.querySelectorAll('#svg1 path').forEach(el => {
@@ -318,63 +173,6 @@ const Work = ({ id }: WorkProps) => {
       })
     })
   }, [facsimile])
-
-  useEffect(() => {
-    if (!toolkit) return
-
-    if (position === 0) {
-      setScoreSVG(toolkit.renderToSVG(1))
-    }
-    else {
-      if (position === 250) {
-        setMeiDoc(prev => {
-          if (!prev) return
-
-          insertBeamedOrnaments(prev);
-          removeTiedNotes(prev);
-          return cloneDocument2(prev);
-        })
-      }
-      else {
-        setMeiDoc(prev => {
-          if (!prev) return
-
-          removeBeamedOrnaments(prev);
-          return cloneDocument2(prev);
-        })
-      }
-    }
-  }, [position, toolkit])
-
-  const handleFiguredBass = (checked: boolean) => {
-    setFiguredBass(checked)
-
-    if (checked) {
-      document.querySelectorAll('.fb').forEach(fb => {
-        fb.setAttribute('opacity', '1')
-      })
-    }
-    else {
-      document.querySelectorAll('.fb').forEach(fb => {
-        fb.setAttribute('opacity', '0')
-      })
-    }
-  }
-
-  const handleCadences = (checked: boolean) => {
-    setCadences(checked)
-
-    if (checked) {
-      document.querySelectorAll('.cadence').forEach(cadence => {
-        cadence.setAttribute('opacity', '1')
-      })
-    }
-    else {
-      document.querySelectorAll('.cadence').forEach(cadence => {
-        cadence.setAttribute('opacity', '0')
-      })
-    }
-  }
 
   return (
     <Grid container spacing={1}>
@@ -430,33 +228,28 @@ const Work = ({ id }: WorkProps) => {
             <FormGroup>
               <FormControlLabel
                 control={<Checkbox
-                  value={modernClefs}
-                  onChange={(_, checked) => {
-                    setModernClefs(checked)
-                  }} />}
+                  checked={modernClefs}
+                  onChange={(_, checked) => setModernClefs(checked)} />}
                 label="Modern clefs" />
             </FormGroup>
             <FormGroup>
               <FormControlLabel
                 control={<Checkbox
-                  value={figuredBass}
-                  onChange={(_, checked) => {
-                    handleFiguredBass(checked)
-                  }} />}
+                  checked={figuredBass}
+                  onChange={(_, checked) => setFiguredBass(checked)} />}
                 label="Figured bass" />
             </FormGroup>
             <FormGroup>
               <FormControlLabel
                 control={<Checkbox
-                  value={cadences}
-                  onChange={(_, checked) => {
-                    handleCadences(checked)
-                  }} />}
+                  checked={cadences}
+                  onChange={(_, checked) => setCadences(checked)} />}
                 label="Cadences" />
             </FormGroup>
           </Stack>
 
-          {scoreSVG && <div id='verovio' ref={verovio} dangerouslySetInnerHTML={{ __html: scoreSVG }} />}
+          {prepared && 'error' in prepared && <Alert severity='error'>{prepared.error}</Alert>}
+          {scoreSVG && <div id='score' ref={score} dangerouslySetInnerHTML={{ __html: scoreSVG }} />}
 
         </Paper>
       </Grid>

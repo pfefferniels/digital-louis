@@ -11,7 +11,8 @@ const score = prepare(meiDocument) // everything that does not depend on t
 element.innerHTML = render(score, t)
 ```
 
-Try it at `/<work>/renderer`, e.g. `/digital-louis/prelude10/renderer`.
+The viewer (`src/Work.tsx`) maps its slider onto the continuum: "Mesuré" is
+`t = 0`, "Non mesuré" is `t = 1`.
 
 ## How it works
 
@@ -21,6 +22,7 @@ Each stage is a pure function of the one before; nothing is mutated.
 | --- | --- |
 | `mei.ts` | reads the dialect into the immutable model of `model.ts`; the only module that touches the DOM |
 | `time.ts`, `reading.ts` | notated onsets (exact, `Rational`) and the reading order that `@precedes` describes |
+| `staffStates.ts`, `signatures.ts` | the clef and key each staff shows as the piece goes on, and where their glyphs go |
 | `analysis.ts` | every head with its staff position, glyph, onset, reading step and stem direction |
 | `horizontal.ts`, `spacing.ts` | gives every head two places: one by notated time, one by reading order |
 | `staff.ts`, `controls.ts`, `page.ts` | engraves a point of the continuum: `x = lerp(measured, reading, t)` |
@@ -52,12 +54,18 @@ facsimile linking work on it unchanged:
 
 ## The dialect
 
-Supported: two or more staves with C, F or G clefs; layers as voices; notes
-(breve to eighth, dots, written accidentals, grace notes as ornaments, cue
-size), chords, rests, spaces, beams, grace groups; ties, trills, mordents,
-figured bass (`harm/fb/f`), directions and bracket spans by time stamp;
-encoded system breaks. `annot` is ignored.
+Supported: two or more staves with C, F or G clefs and key signatures of up to
+seven sharps or flats; clef and key changes in score or staff definitions
+between measures, and clefs within layers; layers as voices; notes (breve to
+eighth, dots, written accidentals, grace notes as ornaments, cue size),
+chords, rests, spaces, beams, grace groups; ties, trills, mordents, figured
+bass (`harm/fb/f`), directions and bracket spans by time stamp; encoded system
+breaks. `annot` is ignored.
+
+Ornaments follow the Bauyn manuscript: the tremblement (`<trill>`) is the
+short wavy line just above its note, the pincé (`<mordent>`) the wavy line
+struck through just below it.
 
 Anything else is reported as `UnsupportedMei`, naming the element, rather
-than drawn wrong. Not yet supported: key signatures, clef changes, slurs,
-fermatas, turns, tuplets, sixteenths.
+than drawn wrong. Not yet supported: slurs, fermatas, turns, tuplets,
+sixteenths, cautionary clefs and keys at the end of a system.

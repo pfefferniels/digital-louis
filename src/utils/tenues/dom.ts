@@ -1,5 +1,5 @@
 /**
- * Bridge between the Verovio SVG and the tenue engine: collects notes,
+ * Bridge between the rendered score and the tenue engine: collects notes,
  * offsets and obstacles from the rendered score, runs the layout and
  * inserts the calligraphic tenues.
  */
