@@ -13,10 +13,11 @@ import { clamp } from './algorithms'
 import { analyse, Analysis } from './analysis'
 import { layOutHorizontally, SystemLayout } from './horizontal'
 import { readScore } from './mei'
-import { engravePage, PageOptions } from './page'
+import { engravePage, Noteheads, PageOptions } from './page'
 import { writeSvg } from './svg'
 
 export { UnsupportedMei } from './mei'
+export type { Noteheads } from './page'
 
 export interface RenderOptions {
     /** the width of a system, in staff spaces */
@@ -35,6 +36,14 @@ export const prepare = (document: Document, options: RenderOptions = {}): Prepar
     return { analysis, systems: layOutHorizontally(analysis, page), options: page }
 }
 
+export interface DrawOptions {
+    /**
+     * `unmeasured` draws every note as unmeasured notation writes it: a
+     * semibreve of one size, without stem, flag, beam or dots.
+     */
+    readonly noteheads?: Noteheads
+}
+
 /** The score as SVG markup at point `t` of the continuum, from 0 (measured) to 1 (as read in the source). */
-export const render = (prepared: PreparedScore, t: number): string =>
-    writeSvg(engravePage(prepared.analysis, prepared.systems, clamp(t, 0, 1), prepared.options))
+export const render = (prepared: PreparedScore, t: number, options: DrawOptions = {}): string =>
+    writeSvg(engravePage(prepared.analysis, prepared.systems, clamp(t, 0, 1), prepared.options, options.noteheads ?? 'notated'))

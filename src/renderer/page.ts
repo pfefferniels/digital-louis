@@ -3,7 +3,7 @@
  * stacked as closely as their content allows, the systems one below the other.
  */
 import { adjacentPairs, exclusiveScan, inclusiveScan, isDefined, lerp } from './algorithms'
-import type { Analysis } from './analysis'
+import { Analysis, asUnmeasured } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
 import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
@@ -16,6 +16,9 @@ import { engraveStaff } from './staff'
 export interface PageOptions {
     readonly systemWidth: number
 }
+
+/** How the heads are drawn: as notated, or as unmeasured notation writes them. */
+export type Noteheads = 'notated' | 'unmeasured'
 
 export interface Page {
     readonly width: number
@@ -55,11 +58,14 @@ interface EngravedSystem {
     readonly box: Box
 }
 
-const engraveSystem = (analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions): EngravedSystem => {
+const engraveSystem = (
+    analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions, noteheads: Noteheads
+): EngravedSystem => {
     const { score } = analysis
     const placed = new Map(analysis.heads.flatMap(head => {
         const slot = layout.slots.get(head.id)
-        return slot ? [[head.id, { head, x: at(slot, t) }] as const] : []
+        const shown = noteheads === 'unmeasured' ? asUnmeasured(head) : head
+        return slot ? [[head.id, { head: shown, x: at(slot, t) }] as const] : []
     }))
     const barlines = layout.barlines.map(slot => at(slot, t))
     const staffIndices = score.staves.map((_, i) => i)
@@ -128,13 +134,13 @@ const engraveSystem = (analysis: Analysis, layout: SystemLayout, t: number, opti
 }
 
 export const engravePage = (
-    analysis: Analysis, layouts: readonly SystemLayout[], t: number, options: PageOptions
+    analysis: Analysis, layouts: readonly SystemLayout[], t: number, options: PageOptions, noteheads: Noteheads
 ): Page => {
     const { title } = analysis.score
     const heading = title === undefined ? [] : [
         group(['pgHead'], [text({ x: options.systemWidth / 2, y: spacing.title }, title, spacing.title, 'middle')]),
     ]
-    const systems = layouts.map(layout => engraveSystem(analysis, layout, t, options))
+    const systems = layouts.map(layout => engraveSystem(analysis, layout, t, options, noteheads))
     const heightOf = (box: Box) => box.bottom - box.top
     const tops = exclusiveScan(
         systems,

@@ -15,26 +15,26 @@ const visibilityMap = new Map<string, string[]>([
         'papier', []
     ],
     [
-        'basse', ['.bassus', '.not-semibreve', '.clef', '.stem', '.barLine']
+        'basse', ['.bassus', '.clef', '.stem', '.barLine']
     ],
     [
-        'basse-chant', ['.bassus', '.cantus', '.not-semibreve', '.clef', '.stem', '.barLine']
+        'basse-chant', ['.bassus', '.cantus', '.clef', '.stem', '.barLine']
     ],
     [
-        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.not-semibreve', '.tie']
+        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.tie']
     ],
     [
-        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.ledgerLines', '.beam polygon', '.dots', '.not-semibreve', '.tie']
+        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.ledgerLines', '.beam polygon', '.dots', '.tie']
     ],
     [
-        'semi-mesure', ['.clef', '.beam polygon', '.beam .stem', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.shadow-semibreve']
+        'semi-mesure', ['.clef', '.beam polygon', '.beam .stem', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
     ],
     [
-        'non-mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.shadow-semibreve']
+        'non-mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
     ]
 ])
 
-const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.not-semibreve', '.tie', '.ornam', '.shadow-semibreve']
+const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.tie', '.ornam']
 
 /**
  * Changes visibilities based on the current position of the slider.

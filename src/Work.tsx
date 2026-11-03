@@ -7,7 +7,6 @@ import { insertTenues, removeTenues } from './utils/tenues/dom';
 import { addTenueInfo } from './utils/addTenueInfo';
 import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
-import { insertShadowSemibreves } from './utils/insertShadowSemibreves';
 import { cloneDocument, insertBeamedOrnaments, removeTiedNotes } from './utils/meiTransforms';
 import { GlowDefs } from './GlowDefs';
 
@@ -135,7 +134,12 @@ const Work = ({ id }: WorkProps) => {
     [meiDoc, modernClefs, semiMeasured]
   )
   const t = continuumAt(position)
-  const scoreSVG = useMemo(() => (prepared && 'score' in prepared ? render(prepared.score, t) : undefined), [prepared, t])
+  // the unmeasured view writes every note alike, as the source does
+  const noteheads = position === continuumLength ? 'unmeasured' : 'notated'
+  const scoreSVG = useMemo(
+    () => (prepared && 'score' in prepared ? render(prepared.score, t, { noteheads }) : undefined),
+    [prepared, t, noteheads]
+  )
 
   useLayoutEffect(() => {
     if (!scoreSVG || !facsimile) return
@@ -148,10 +152,6 @@ const Work = ({ id }: WorkProps) => {
   useLayoutEffect(() => {
     const svg = score.current?.querySelector('svg')
     if (!svg) return
-
-    if (position === continuumLength) {
-      insertShadowSemibreves()
-    }
 
     changeVisibilities(position)
     showAll('.fb', figuredBass)

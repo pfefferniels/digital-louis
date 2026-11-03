@@ -106,15 +106,8 @@ const obstacleSelectors: [string, ObstacleKind][] = [
 /** obstacles outside of the systems (title etc.) */
 const pageObstacleSelectors = ['.pgHead']
 
-/**
- * The visible notehead of a note: either the original glyph
- * or the semibreve that replaces it in the unmeasured views.
- */
-const visibleHead = (note: Element) => {
-    const shadow = note.querySelector('.shadow-semibreve path')
-    if (shadow && isVisible(shadow)) return shadow
-    return note.querySelector('.notehead use')
-}
+/** The notehead of a note. */
+const visibleHead = (note: Element) => note.querySelector('.notehead use')
 
 export const removeTenues = (svgEl: Element) => {
     svgEl.querySelectorAll('.tenue').forEach(tenue => tenue.remove())

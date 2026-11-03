@@ -187,7 +187,8 @@ const drawBeam = (scene: LayerScene, events: readonly LayerEvent[], beam: BeamGr
     const members = events
         .map(event => ({ event, tones: tonesOf(scene, event) }))
         .filter(member => member.tones.length > 0)
-    if (members.length < 2) return group(['beam'], members.flatMap(({ event }) => drawEvent(scene, event)))
+    const stemmed = members.every(({ tones }) => tones.every(tone => tone.head.stem !== undefined))
+    if (members.length < 2 || !stemmed) return group(['beam'], members.flatMap(({ event }) => drawEvent(scene, event)))
     const { stems, outline } = beamStems(members, beam)
     return group(['beam', ...beam.beam.types], [
         { kind: 'polygon', points: outline },

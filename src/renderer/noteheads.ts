@@ -133,10 +133,9 @@ export const dotRadius = 0.2
 /** Dots follow the head, in the space above where the head sits on a line. */
 export const dotCenters = (placed: PlacedHead): Point[] => {
     const { head } = placed
-    const dots = head.kind === 'note' ? head.note.duration.dots : head.rest.duration.dots
     const y = positionY(isOnLine(head.position) ? head.position + 1 : head.position)
     const first = headBox(placed).right + 0.35 * head.scale
-    return Array.from({ length: dots }, (_, i) => ({ x: first + i * 0.5 * head.scale, y }))
+    return Array.from({ length: head.dots }, (_, i) => ({ x: first + i * 0.5 * head.scale, y }))
 }
 
 const dotBox = ({ x, y }: Point): Box =>

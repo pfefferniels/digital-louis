@@ -11,8 +11,13 @@ const score = prepare(meiDocument) // everything that does not depend on t
 element.innerHTML = render(score, t)
 ```
 
+`render(score, t, { noteheads: 'unmeasured' })` draws every note as unmeasured
+notation writes it, as the Bauyn manuscript does: a semibreve of one size,
+ornaments and long notes alike, without stem, flag, beam or dots. The reading
+layout always leaves room for heads drawn that way.
+
 The viewer (`src/Work.tsx`) maps its slider onto the continuum: "Mesuré" is
-`t = 0`, "Non mesuré" is `t = 1`.
+`t = 0`, "Non mesuré" is `t = 1`, drawn with unmeasured noteheads.
 
 ## How it works
 
