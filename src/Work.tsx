@@ -70,8 +70,13 @@ const cloneDocument2 = (doc: Document) => {
 }
 
 const insertBeamedOrnaments = (meiDoc: Document) => {
-  const processBuffer = (notes: Element[]) => {
-    wrapAll(notes, meiDoc.createElementNS('http://www.music-encoding.org/ns/mei', 'beam'))
+  const processBuffer = (buffer: Element[]) => {
+    // passing notes inside an encoded beam are beamed already
+    const notes = [...new Set(buffer)].filter(note => !note.closest('beam'))
+    if (!notes.length) return
+    const beam = meiDoc.createElementNS('http://www.music-encoding.org/ns/mei', 'beam')
+    beam.setAttribute('type', 'ornam-beam')
+    wrapAll(notes, beam)
     notes.forEach(note => {
       note.setAttribute('dur', '8')
     })
@@ -115,7 +120,8 @@ const insertBeamedOrnaments = (meiDoc: Document) => {
 }
 
 const removeBeamedOrnaments = (meiDoc: Document) => {
-  meiDoc.querySelectorAll('beam').forEach(beam => {
+  // only the beams added by insertBeamedOrnaments: encoded beams keep their notes
+  meiDoc.querySelectorAll('beam[type="ornam-beam"]').forEach(beam => {
     const childNotes = beam.querySelectorAll('note[type="ornam"]');
     if (childNotes.length === 0) return;
 
