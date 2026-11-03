@@ -534,8 +534,8 @@
                           <note xml:id="note-1554454382" dur="4" oct="4" pname="b" corresp="#path1397-p-466" precedes="#note-1572067164" />
                           <note xml:id="note-2069543398" dur="4" oct="4" pname="b" />
                           <note xml:id="note-0062090594" dur="8" oct="4" pname="a" corresp="#path1397-p-471" precedes="#note-1930069392" />
-                          <note xml:id="note-ed-iy49zv1" dur="8" oct="4" pname="a" />
-                          <note xml:id="note-ed-jrbt6oe" dur="4" oct="4" pname="a" />
+                          <note xml:id="note-ed-iy49zv1" dur="8" oct="4" pname="a" corresp="#path1397-r-1025-2495" />
+                          <note xml:id="note-ed-jrbt6oe" dur="4" oct="4" pname="a" corresp="#path1397-r-338-2828" />
                           <note xml:id="note-0975064305" dur="4" oct="4" pname="g" corresp="#path1397-p-526" precedes="#note-0301188336">
                              <accid xml:id="accid-0509050441" accid="s" accid.ges="s" />
                           </note>
@@ -543,31 +543,31 @@
                         <layer type="altus" n="2">
                            <note xml:id="note-2128955989" dur="4" oct="4" pname="d" corresp="#path1397-p-419" precedes="#note-1528914671" />
                            <note xml:id="note-0304603787" dur="4" oct="4" pname="e" corresp="#path1397-p-423" precedes="#note-1210762033" />
-                           <note xml:id="note-0736513790" dur="4" oct="4" pname="d" />
+                           <note xml:id="note-0736513790" dur="4" oct="4" pname="d" corresp="#path1397-r-94-2535" />
                            <note xml:id="note-1181043641" dur="4" oct="4" pname="d" corresp="#path1397-p-464" precedes="#note-1554454382" />
                            <note xml:id="note-1920401341" dur="4" oct="4" pname="d" corresp="#path1397-p-468" precedes="#note-0919987249" />
                            <beam xml:id="beam-1348513156">
                               <note xml:id="note-0919987249" dur="8" oct="4" pname="c" corresp="#path1397-p-470" precedes="#note-0062090594" />
                               <note xml:id="note-0989333855" dur="8" oct="3" pname="b" />
                            </beam>
-                           <note xml:id="grace-ed-1rd9ybn" type="ornam" grace="unknown" dur="4" oct="4" pname="d" />
-                           <note xml:id="note-0892484456" dur="4" oct="4" pname="c" corresp="#path1397-p-522" precedes="#note-0246968505" />
-                           <note xml:id="grace-ed-o9xa9jf" type="ornam" grace="unknown" dur="4" oct="4" pname="c" />
+                           <note xml:id="grace-ed-1rd9ybn" type="ornam" grace="unknown" dur="4" oct="4" pname="d" corresp="#path1397-r-264-2867" />
+                           <note xml:id="note-0892484456" dur="4" oct="4" pname="c" corresp="#path1397-r-285-2875" precedes="#note-0246968505" />
+                           <note xml:id="grace-ed-o9xa9jf" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-p-522" />
                            <note xml:id="note-0246968505" dur="4" oct="3" pname="b" corresp="#path1397-p-523" precedes="#note-0975064305" />
                            <note xml:id="grace-ed-90qdd7h" type="ornam" grace="unknown" dur="4" oct="4" pname="c" accid="s" />
-                           <note xml:id="grace-ed-gla8ybg" type="ornam" grace="unknown" dur="4" oct="4" pname="d" />
+                           <note xml:id="grace-ed-gla8ybg" type="ornam" grace="unknown" dur="4" oct="4" pname="d" corresp="#path1397-r-554-2866" />
                         </layer>
                         <layer type="tenor" n="3">
                            <note xml:id="grace-ed-3q3edh8" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-ed-j4omdbp" />
                            <note xml:id="note-1916715996" dur="4" oct="3" pname="b" corresp="#path1397-p-417" precedes="#note-2128955989" />
                            <note xml:id="grace-ed-vgik2qy" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-ed-j289qci" />
-                           <note xml:id="grace-ed-611qjew" type="ornam" grace="unknown" dur="4" oct="4" pname="d" />
+                           <note xml:id="grace-ed-611qjew" type="ornam" grace="unknown" dur="4" oct="4" pname="d" corresp="#path1397-p-419" />
                            <note xml:id="note-0523766084" dur="2" oct="4" pname="c" corresp="#path1397-p-422" precedes="#note-0304603787" />
-                           <note xml:id="note-1177902210" dur="4" oct="4" pname="e" />
+                           <note xml:id="note-1177902210" dur="4" oct="4" pname="e" corresp="#path1397-r-309-2526" />
                            <note xml:id="note-0343347995" dur="4" oct="4" pname="e" />
-                           <note xml:id="grace-ed-ya0kgi1" type="ornam" grace="unknown" dur="4" oct="4" pname="d" />
-                           <note xml:id="note-ed-mr0mvtc" dur="8" oct="4" pname="e" />
-                           <note xml:id="grace-ed-y9cwc60" type="ornam" grace="unknown" dur="4" oct="4" pname="e" />
+                           <note xml:id="grace-ed-ya0kgi1" type="ornam" grace="unknown" dur="4" oct="4" pname="d" corresp="#path1397-p-468" />
+                           <note xml:id="note-ed-mr0mvtc" dur="8" oct="4" pname="e" corresp="#path1397-r-639-2524" />
+                           <note xml:id="grace-ed-y9cwc60" type="ornam" grace="unknown" dur="4" oct="4" pname="e" corresp="#path1397-r-968-2525" />
                            <note xml:id="note-1930069392" dur="8" oct="4" pname="f" corresp="#path1397-p-475" precedes="#note-0300542057" />
                            <note xml:id="note-0116494889" dur="2" oct="4" pname="e" corresp="#path1397-p-519" precedes="#note-0892484456" />
                         </layer>
@@ -576,53 +576,53 @@
                         <layer type="quintus" n="5">
                            <note xml:id="note-0579125506" dur="4" oct="3" pname="f" corresp="#path1397-p-434" precedes="#note-1916715996" />
                            <note xml:id="grace-ed-n8wihm2" type="ornam" grace="unknown" dur="4" oct="3" pname="e" />
-                           <note xml:id="grace-ed-khroojs" type="ornam" grace="unknown" dur="4" oct="3" pname="d" />
+                           <note xml:id="grace-ed-khroojs" type="ornam" grace="unknown" dur="4" oct="3" pname="d" corresp="#path1397-r-662-2369" />
                            <note xml:id="note-1528914671" dur="4" oct="3" pname="e" corresp="#path1397-p-440" precedes="#note-0523766084" />
                            <space xml:id="space-0076161001" dur="2" />
                         </layer>
                         <layer type="bassus" n="6">
                            <note xml:id="note-1117898097" dur="2" oct="2" pname="g"  />
-                           <note xml:id="grace-ed-bywjbrs" type="ornam" grace="unknown" dur="4" oct="3" pname="f" />
-                           <note xml:id="grace-ed-cxs67l9" type="ornam" grace="unknown" dur="4" oct="3" pname="g" />
-                           <note xml:id="grace-ed-y1drxo2" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
-                           <note xml:id="grace-ed-gjpqjpd" type="ornam" grace="unknown" dur="4" oct="3" pname="g" />
-                           <note xml:id="grace-ed-iqszdr1" type="ornam" grace="unknown" dur="4" oct="3" pname="f" />
-                           <note xml:id="grace-ed-bjseivi" type="ornam" grace="unknown" dur="4" oct="3" pname="e" />
-                           <note xml:id="grace-ed-qcedvz7" type="ornam" grace="unknown" dur="4" oct="3" pname="f" />
-                           <note xml:id="grace-ed-61j0ily" type="ornam" grace="unknown" dur="4" oct="3" pname="e" />
-                           <note xml:id="grace-ed-f4gr2af" type="ornam" grace="unknown" dur="4" oct="3" pname="d" />
+                           <note xml:id="grace-ed-bywjbrs" type="ornam" grace="unknown" dur="4" oct="3" pname="f" corresp="#path1397-r-785-2352" />
+                           <note xml:id="grace-ed-cxs67l9" type="ornam" grace="unknown" dur="4" oct="3" pname="g" corresp="#path1397-r-816-2343" />
+                           <note xml:id="grace-ed-y1drxo2" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-842-2332" />
+                           <note xml:id="grace-ed-gjpqjpd" type="ornam" grace="unknown" dur="4" oct="3" pname="g" corresp="#path1397-r-856-2343" />
+                           <note xml:id="grace-ed-iqszdr1" type="ornam" grace="unknown" dur="4" oct="3" pname="f" corresp="#path1397-r-874-2351" />
+                           <note xml:id="grace-ed-bjseivi" type="ornam" grace="unknown" dur="4" oct="3" pname="e" corresp="#path1397-r-888-2362" />
+                           <note xml:id="grace-ed-qcedvz7" type="ornam" grace="unknown" dur="4" oct="3" pname="f" corresp="#path1397-r-910-2351" />
+                           <note xml:id="grace-ed-61j0ily" type="ornam" grace="unknown" dur="4" oct="3" pname="e" corresp="#path1397-r-929-2362" />
+                           <note xml:id="grace-ed-f4gr2af" type="ornam" grace="unknown" dur="4" oct="3" pname="d" corresp="#path1397-r-947-2371" />
                            <note xml:id="grace-ed-2hp2rwg" type="ornam" grace="unknown" dur="4" oct="3" pname="c" />
-                           <note xml:id="grace-ed-tdk8nto" type="ornam" grace="unknown" dur="4" oct="3" pname="d" />
-                           <note xml:id="grace-ed-smk4m41" type="ornam" grace="unknown" dur="4" oct="3" pname="e" />
-                           <note xml:id="grace-ed-c8cycj8" type="ornam" grace="unknown" dur="4" oct="3" pname="f" />
-                           <note xml:id="grace-ed-3k6xi13" type="ornam" grace="unknown" dur="4" oct="3" pname="g" />
-                           <note xml:id="grace-ed-x33hbza" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
-                           <note xml:id="grace-ed-w004lcd" type="ornam" grace="unknown" dur="4" oct="3" pname="b" />
+                           <note xml:id="grace-ed-tdk8nto" type="ornam" grace="unknown" dur="4" oct="3" pname="d" corresp="#path1397-r-985-2371" />
+                           <note xml:id="grace-ed-smk4m41" type="ornam" grace="unknown" dur="4" oct="3" pname="e" corresp="#path1397-r-1005-2362" />
+                           <note xml:id="grace-ed-c8cycj8" type="ornam" grace="unknown" dur="4" oct="3" pname="f" corresp="#path1397-r-1025-2351" />
+                           <note xml:id="grace-ed-3k6xi13" type="ornam" grace="unknown" dur="4" oct="3" pname="g" corresp="#path1397-r-1046-2343" />
+                           <note xml:id="grace-ed-x33hbza" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-1068-2332" />
+                           <note xml:id="grace-ed-w004lcd" type="ornam" grace="unknown" dur="4" oct="3" pname="b" corresp="#path1397-r-1091-2324" />
                            <note xml:id="note-1043386656" dur="4" oct="3" pname="f" corresp="#path1397-ed-btw5h5c">
                               <accid xml:id="accid-0064843932" accid="s" accid.ges="s" />
                            </note>
-                           <note xml:id="grace-ed-s12yw5j" type="ornam" grace="unknown" dur="4" oct="4" pname="c" />
-                           <note xml:id="grace-ed-dmgza32" type="ornam" grace="unknown" dur="4" oct="3" pname="b" />
-                           <note xml:id="grace-ed-m6x0soc" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
-                           <note xml:id="grace-ed-o9s1xrc" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
+                           <note xml:id="grace-ed-s12yw5j" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-r-140-2632" />
+                           <note xml:id="grace-ed-dmgza32" type="ornam" grace="unknown" dur="4" oct="3" pname="b" corresp="#path1397-r-166-2644" />
+                           <note xml:id="grace-ed-m6x0soc" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-195-2654" />
+                           <note xml:id="grace-ed-o9s1xrc" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-222-2654" />
                            <note xml:id="note-2115919651" dur="4" oct="3" pname="g" corresp="#path1397-ed-teeig0t">
                               <accid xml:id="accid-0473186503" accid="s" accid.ges="s" />
                            </note>
-                           <note xml:id="grace-ed-1eg6pm6" type="ornam" grace="unknown" dur="4" oct="3" pname="e" />
-                           <note xml:id="grace-ed-dkorybp" type="ornam" grace="unknown" dur="4" oct="3" pname="f" accid="s" />
-                           <note xml:id="grace-ed-ozqx215" type="ornam" grace="unknown" dur="4" oct="3" pname="g" accid="s" />
-                           <note xml:id="grace-ed-tata5e9" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
-                           <note xml:id="grace-ed-p03sufm" type="ornam" grace="unknown" dur="4" oct="3" pname="b" />
-                           <note xml:id="grace-ed-nf529l9" type="ornam" grace="unknown" dur="4" oct="3" pname="a" />
-                           <note xml:id="grace-ed-4ny9s96" type="ornam" grace="unknown" dur="4" oct="3" pname="b" />
-                           <note xml:id="grace-ed-j59ndix" type="ornam" grace="unknown" dur="4" oct="4" pname="c" />
+                           <note xml:id="grace-ed-1eg6pm6" type="ornam" grace="unknown" dur="4" oct="3" pname="e" corresp="#path1397-r-338-2684" />
+                           <note xml:id="grace-ed-dkorybp" type="ornam" grace="unknown" dur="4" oct="3" pname="f" accid="s" corresp="#path1397-r-350-2673" />
+                           <note xml:id="grace-ed-ozqx215" type="ornam" grace="unknown" dur="4" oct="3" pname="g" accid="s" corresp="#path1397-r-404-2663" />
+                           <note xml:id="grace-ed-tata5e9" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-431-2653" />
+                           <note xml:id="grace-ed-p03sufm" type="ornam" grace="unknown" dur="4" oct="3" pname="b" corresp="#path1397-r-455-2640" />
+                           <note xml:id="grace-ed-nf529l9" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-r-476-2653" />
+                           <note xml:id="grace-ed-4ny9s96" type="ornam" grace="unknown" dur="4" oct="3" pname="b" corresp="#path1397-r-506-2644" />
+                           <note xml:id="grace-ed-j59ndix" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-r-530-2631" />
                            <note xml:id="note-1572067164" dots="1" dur="4" oct="3" pname="c" corresp="#path1397-p-503" precedes="#note-1920401341" />
-                           <note xml:id="grace-ed-w8j8dv3" type="ornam" grace="unknown" dur="4" oct="2" pname="a" />
-                           <note xml:id="grace-ed-drlmois" type="ornam" grace="unknown" dur="4" oct="2" pname="b" />
-                           <note xml:id="grace-ed-l9z4qc4" type="ornam" grace="unknown" dur="4" oct="3" pname="c" />
-                           <note xml:id="grace-ed-w9w238b" type="ornam" grace="unknown" dur="4" oct="3" pname="c" />
-                           <note xml:id="grace-ed-70y5xqj" type="ornam" grace="unknown" dur="4" oct="2" pname="b" />
-                           <note xml:id="grace-ed-ww9dp14" type="ornam" grace="unknown" dur="4" oct="3" pname="c" />
+                           <note xml:id="grace-ed-w8j8dv3" type="ornam" grace="unknown" dur="4" oct="2" pname="a" corresp="#path1397-r-701-2724" />
+                           <note xml:id="grace-ed-drlmois" type="ornam" grace="unknown" dur="4" oct="2" pname="b" corresp="#path1397-r-728-2710" />
+                           <note xml:id="grace-ed-l9z4qc4" type="ornam" grace="unknown" dur="4" oct="3" pname="c" corresp="#path1397-r-755-2702" />
+                           <note xml:id="grace-ed-w9w238b" type="ornam" grace="unknown" dur="4" oct="3" pname="c" corresp="#path1397-r-783-2702" />
+                           <note xml:id="grace-ed-70y5xqj" type="ornam" grace="unknown" dur="4" oct="2" pname="b" corresp="#path1397-r-821-2710" />
+                           <note xml:id="grace-ed-ww9dp14" type="ornam" grace="unknown" dur="4" oct="3" pname="c" corresp="#path1397-r-848-2702" />
                            <note xml:id="note-2135961627" dur="8" oct="2" pname="d"  />
                            <note xml:id="note-0300542057" dur="2" oct="2" pname="e" corresp="#path1397-p-553" precedes="#note-0116494889" />
                         </layer>
@@ -665,8 +665,8 @@
                   <measure xml:id="m9" n="9">
                      <staff xml:id="staff-0798663620" n="1">
                         <layer type="cantus" n="1">
-                           <note xml:id="note-1567428498" dur="2" oct="4" pname="a" />
-                           <note type="ornam" grace="unknown" xml:id="note-3115452547" dur="4" oct="4" pname="e" />
+                           <note xml:id="note-1567428498" dur="2" oct="4" pname="a" corresp="#path1397-r-718-2826" />
+                           <note type="ornam" grace="unknown" xml:id="note-3115452547" dur="4" oct="4" pname="e" corresp="#path1397-r-745-2854" />
                            <note type="ornam" grace="unknown" xml:id="note-4115452547" dur="4" oct="4" pname="f" />
                            <note type="ornam" grace="unknown" xml:id="note-5115452547" dur="4" oct="4" pname="g" corresp="#path1397-p-540" precedes="#note-6115452547" />
                            <note type="ornam" grace="unknown" xml:id="note-6115452547" dur="4" oct="4" pname="a" corresp="#path1397-p-541" precedes="#note-7115452547" />
@@ -706,7 +706,7 @@
                               <accid accid="f" />
                            </note>
                            <note type="ornam" grace="unknown" xml:id="note-1842558645" dur="4" oct="4" pname="b" accid.ges="f" />
-                           <note xml:id="note-0842558645" dur="4" oct="4" pname="a" />
+                           <note xml:id="note-0842558645" dur="4" oct="4" pname="a" corresp="#path1397-r-299-3165" />
                            <note grace="unknown" xml:id="note-5355143401" dur="8" oct="5" pname="c" type="ornam">
                               <accid accid="s" />
                            </note>
@@ -716,26 +716,26 @@
                            </beam>
                         </layer>
                         <layer type="tenor" n="3">
-                          <note xml:id="note-0703717202" dur="2" oct="3" pname="a" />
-                          <note xml:id="note-1703717202" dur="2" oct="4" pname="a" />
+                          <note xml:id="note-0703717202" dur="2" oct="3" pname="a" corresp="#path1397-r-795-2894" />
+                          <note xml:id="note-1703717202" dur="2" oct="4" pname="a" corresp="#path1397-r-1068-2828" />
                           <note xml:id="note-0483158947" dur="4" dots="1" oct="4" pname="g" corresp="#path1397-p-576" precedes="#note-0077946009" />
                           <note xml:id="note-1483158947" dur="8" oct="4" pname="g"  />
-                          <note xml:id="note-0924473976" dur="4" oct="4" pname="a" corresp="#path1397-p-597" precedes="#note-1505039910" />
-                          <note xml:id="note-0124473976" dur="4" oct="4" pname="a"  />
+                          <note xml:id="note-0924473976" dur="4" oct="4" pname="a" precedes="#note-1505039910" />
+                          <note xml:id="note-0124473976" dur="4" oct="4" pname="a" corresp="#path1397-p-597" />
                         </layer>
                      </staff>
                      <staff xml:id="staff-1981665432" n="2">
                         <layer type="quintus" n="5">
                           <note xml:id="note-1458408413" dur="1" oct="1" pname="a"  />
-                          <note grace="unknown" xml:id="note-0917346377" dur="4" oct="2" pname="a" type="ornam" />
-                          <note grace="unknown" xml:id="note-1484688372" dur="4" oct="2" pname="g" type="ornam" />
-                          <note grace="unknown" xml:id="note-1543705905" dur="4" oct="2" pname="f" type="ornam" />
+                          <note grace="unknown" xml:id="note-0917346377" dur="4" oct="2" pname="a" type="ornam" corresp="#path1397-p-564" />
+                          <note grace="unknown" xml:id="note-1484688372" dur="4" oct="2" pname="g" type="ornam" corresp="#path1397-r-1055-3057" />
+                          <note grace="unknown" xml:id="note-1543705905" dur="4" oct="2" pname="f" type="ornam" corresp="#path1397-r-45-3402" />
                           <rest xml:id="rest-1711755528" dur="4" />
-                          <note xml:id="note-0423841128" dur="2" oct="3" pname="c" />
+                          <note xml:id="note-0423841128" dur="2" oct="3" pname="c" corresp="#path1397-r-245-3362" />
                           <note xml:id="note-1505039910" dur="4" oct="3" pname="d" corresp="#path1397-p-617" precedes="#note-0780219925" />
                         </layer>
                         <layer type="bassus" n="6">
-                          <note xml:id="note-0301188336" dur="2" oct="2" pname="a" corresp="#path1397-p-564" precedes="#note-1076433475" />
+                          <note xml:id="note-0301188336" dur="2" oct="2" pname="a" corresp="#path1397-r-117-3057" precedes="#note-1076433475" />
                           <space xml:id="space-1863926049" dur="2" />
                           <note xml:id="note-0261405641" dur="2" oct="2" pname="e" corresp="#path1397-p-573" precedes="#note-0483158947" />
                           <note xml:id="note-0035328564" dur="2" oct="2" pname="f" corresp="#path1397-p-614" precedes="#note-0924473976" />
@@ -747,13 +747,13 @@
                      <staff xml:id="staff-0407171880" n="1">
                         <layer type="cantus" n="1">
                            <note xml:id="note-1000195378" dur="4" oct="5" pname="f" />
-                           <note type="ornam" grace="unknown" xml:id="note-3918239782" dur="4" oct="4" pname="b" />
-                           <note type="ornam" grace="unknown" xml:id="note-4918239782" dur="4" oct="5" pname="c" />
-                           <note type="ornam" grace="unknown" xml:id="note-5918239782" dur="4" oct="5" pname="d" />
+                           <note type="ornam" grace="unknown" xml:id="note-3918239782" dur="4" oct="4" pname="b" corresp="#path1397-r-295-3467" />
+                           <note type="ornam" grace="unknown" xml:id="note-4918239782" dur="4" oct="5" pname="c" corresp="#path1397-p-626" />
+                           <note type="ornam" grace="unknown" xml:id="note-5918239782" dur="4" oct="5" pname="d" corresp="#path1397-r-352-3447" />
                            <note xml:id="note-1265259153" dur="2" oct="5" pname="e" corresp="#path1397-p-628" precedes="#note-2130382801" />
-                           <note type="ornam" grace="unknown" xml:id="note-2918239782" dur="4" oct="5" pname="c" />
-                           <note xml:id="note-3031868772" dur="4" oct="5" pname="d" corresp="#path1397-p-641" precedes="#note-1619040992" />
-                           <note xml:id="note-0311868772" dur="4" oct="5" pname="d" corresp="#path1397-p-667" precedes="#note-4031868772" />
+                           <note type="ornam" grace="unknown" xml:id="note-2918239782" dur="4" oct="5" pname="c" corresp="#path1397-r-781-3457" />
+                           <note xml:id="note-3031868772" dur="4" oct="5" pname="d" corresp="#path1397-p-667" precedes="#note-1619040992" />
+                           <note xml:id="note-0311868772" dur="4" oct="5" pname="d" precedes="#note-4031868772" />
                            <!-- accent, superiectio -->
                            <note type="ornam" grace="unknown" xml:id="note-4031868772" dur="4" oct="5" pname="e" corresp="#path1397-p-670" precedes="#note-3121868772" />
 
@@ -766,12 +766,12 @@
                         </layer>
                         <layer type="altus" n="2">
                            <note xml:id="note-0473500089" dur="4" oct="5" pname="d" corresp="#path1397-p-623" precedes="#note-1058616361" />
-                           <note xml:id="note-1088234959" dur="4" oct="5" pname="c" corresp="#path1397-p-626" precedes="#note-1265259153" />
-                           <note xml:id="note-2130382801" dur="4" oct="5" pname="c" corresp="#path1397-p-630" precedes="#note-2059854774" />
-                           <note xml:id="note-1720517193" dur="4" oct="5" pname="c" corresp="#path1397-p-638" precedes="#note-3031868772" />
+                           <note xml:id="note-1088234959" dur="4" oct="5" pname="c" precedes="#note-1265259153" />
+                           <note xml:id="note-2130382801" dur="4" oct="5" pname="c" corresp="#path1397-p-638" precedes="#note-2059854774" />
+                           <note xml:id="note-1720517193" dur="4" oct="5" pname="c" corresp="#path1397-r-103-3789" precedes="#note-3031868772" />
 
                            <note xml:id="note-4720517193" dur="4" oct="4" pname="b" corresp="#path1397-p-665" precedes="#note-0311868772" />
-                           <note xml:id="note-9720517193" dur="4" oct="4" pname="g"  />
+                           <note xml:id="note-9720517193" dur="4" oct="4" pname="g" corresp="#path1397-r-342-3818" />
                            <note xml:id="note-1020517193" dur="4" oct="4" pname="g" corresp="#path1397-p-681" precedes="#note-6720517193" />
                            <note xml:id="note-1120517193" dur="4" oct="4" pname="f" corresp="#path1397-p-685" precedes="#note-7720517193" />
                         </layer>
@@ -779,11 +779,11 @@
                            <note xml:id="note-1298056713" dur="4" oct="4" pname="b" corresp="#path1397-p-622" precedes="#note-0473500089">
                               <accid xml:id="accid-1711336169" accid="n" />
                            </note>
-                           <note xml:id="note-0692507101" dur="4" oct="4" pname="g"  />
-                           <note xml:id="note-0002070773" dur="4" oct="4" pname="a"  />
-                           <note xml:id="note-0384561035" dur="4" oct="4" pname="a" corresp="#path1397-p-637" precedes="#note-1720517193" />
-                           <note xml:id="note-0682158120" dur="4" oct="4" pname="f"  />
-                           <note xml:id="note-1543220474" dur="4" oct="4" pname="e"  />
+                           <note xml:id="note-0692507101" dur="4" oct="4" pname="g" corresp="#path1397-r-443-3484" />
+                           <note xml:id="note-0002070773" dur="4" oct="4" pname="a" corresp="#path1397-p-637" />
+                           <note xml:id="note-0384561035" dur="4" oct="4" pname="a" precedes="#note-1720517193" />
+                           <note xml:id="note-0682158120" dur="4" oct="4" pname="f" corresp="#path1397-r-178-3829" />
+                           <note xml:id="note-1543220474" dur="4" oct="4" pname="e" corresp="#path1397-r-364-3837" />
                            <note xml:id="note-0301510021" dur="2" oct="4" pname="d" corresp="#path1397-p-680" precedes="#note-1020517193" />
                         </layer>
                      </staff>
@@ -791,19 +791,19 @@
                         <layer type="quintus" n="5">
                            <note xml:id="note-1677005276" dur="4" oct="3" pname="d" />
                            <note xml:id="note-1058616361" dur="4" oct="3" pname="e" corresp="#path1397-p-647" precedes="#note-1088234959" />
-                           <note xml:id="note-0225998867" dur="4" oct="3" pname="f" />
-                           <note xml:id="note-2059854774" dur="4" oct="3" pname="f" corresp="#path1397-p-656" precedes="#note-0384561035">
+                           <note xml:id="note-0225998867" dur="4" oct="3" pname="f" corresp="#path1397-p-656" />
+                           <note xml:id="note-2059854774" dur="4" oct="3" pname="f" corresp="#path1397-r-887-3653" precedes="#note-0384561035">
                               <accid xml:id="accid-0445685763" accid="s" accid.ges="s" />
                            </note>
-                           <note xml:id="note-1619040992" dur="2" oct="3" pname="g" corresp="#path1397-p-657" precedes="#note-4720517193" />
-                           <note xml:id="note-1213960630" dur="2" oct="2" pname="g" corresp="#path1397-p-708" precedes="#note-0301510021" />
+                           <note xml:id="note-1619040992" dur="2" oct="3" pname="g" corresp="#path1397-r-978-3645" precedes="#note-4720517193" />
+                           <note xml:id="note-1213960630" dur="2" oct="2" pname="g" corresp="#path1397-r-554-4039" precedes="#note-0301510021" />
                         </layer>
                         <layer type="bassus" n="6">
                            <note xml:id="note-0780219925" dur="1" oct="2" pname="g" corresp="#path1397-p-645" precedes="#note-1298056713" />
                            <note xml:id="note-0883174327" dur="4" oct="2" pname="g"  />
                            <beam xml:id="beam-0260593702">
-                              <note xml:id="note-0627124431" dur="8" oct="2" pname="e"  />
-                              <note xml:id="note-1315573627" dur="8" oct="2" pname="f" corresp="#path1397-p-705" precedes="#note-1213960630">
+                              <note xml:id="note-0627124431" dur="8" oct="2" pname="e" corresp="#path1397-r-437-4061" />
+                              <note xml:id="note-1315573627" dur="8" oct="2" pname="f" corresp="#path1397-r-494-4052" precedes="#note-1213960630">
                                  <accid xml:id="accid-0788445385" accid="n" />
                               </note>
                            </beam>
@@ -815,10 +815,10 @@
                      <staff xml:id="staff-0806660062" n="1">
                         <layer type="cantus" n="1">
                            <chord xml:id="chord-1430505156" dur="brevis">
-                              <note xml:id="note-0357855042" oct="4" pname="c" />
+                              <note xml:id="note-0357855042" oct="4" pname="c" corresp="#path1397-r-989-3858" />
                               <note xml:id="note-1711187850" oct="4" pname="e" corresp="#path1397-p-696" />
-                              <note xml:id="note-1926234093" oct="4" pname="g" corresp="#path1397-p-695" precedes="#note-1711187850" />
-                              <note xml:id="note-1340525337" oct="5" pname="c" corresp="#path1397-p-694" precedes="#note-1926234093" />
+                              <note xml:id="note-1926234093" oct="4" pname="g" corresp="#path1397-r-951-3818" precedes="#note-1711187850" />
+                              <note xml:id="note-1340525337" oct="5" pname="c" corresp="#path1397-r-1065-3792" precedes="#note-1926234093" />
                            </chord>
                         </layer>
                      </staff>
@@ -827,7 +827,7 @@
                            <note xml:id="note-1365412755" dur="brevis" oct="3" pname="c" corresp="#path1397-p-717" precedes="#note-1340525337" />
                         </layer>
                         <layer type="bassus" n="6">
-                           <note xml:id="note-1517956334" dur="brevis" oct="2" pname="c" />
+                           <note xml:id="note-1517956334" dur="brevis" oct="2" pname="c" corresp="#path1397-r-618-4086" />
                         </layer>
                      </staff>
                   </measure>
