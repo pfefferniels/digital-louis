@@ -159,25 +159,31 @@ def apply_mei(repo_text, saved_text, log):
             text = text[:ls] + ind + render(b, ind) + '\n' + text[ls:]
         log.append(f'inserted {local(b)} {xid}')
 
-    # 4. ornaments per measure
-    def ornaments(root):
+    # 4. ornaments and ties per measure, matched by (element, startid, endid)
+    def control_events(root):
         out = {}
         for m in root.iter(NS + 'measure'):
             for c in m:
-                if local(c) in ORN:
-                    out.setdefault(m.get(XID), []).append((local(c), c.get('startid')))
+                if local(c) in ORN + ('tie',):
+                    out.setdefault(m.get(XID), []).append((local(c), c.get('startid'), c.get('endid')))
         return out
-    oa, ob = ornaments(A), ornaments(B)
+    oa, ob = control_events(A), control_events(B)
     for mid in set(oa) | set(ob):
-        for orn in set(ob.get(mid, [])) - set(oa.get(mid, [])):
+        for tag, sid, eid in set(ob.get(mid, [])) - set(oa.get(mid, [])):
             s, e, end, _ = tag_span(text, mid)
             close = text.index('</measure>', e)
             ls = line_start(text, close)
-            text = text[:ls] + ' ' * 21 + f'<{orn[0]} startid="{orn[1]}"/>\n' + text[ls:]
-            log.append(f'added {orn[0]} on {orn[1]}')
-        for orn in set(oa.get(mid, [])) - set(ob.get(mid, [])):
-            text, k = re.subn(r'\n[ \t]*<%s\s+startid="%s"\s*/>' % (orn[0], re.escape(orn[1])), '', text, count=1)
-            log.append(f'removed {orn[0]} on {orn[1]}' if k else f'!! could not remove {orn}')
+            ends = f' endid="{eid}"' if eid else ''
+            text = text[:ls] + ' ' * 21 + f'<{tag} startid="{sid}"{ends} />\n' + text[ls:]
+            log.append(f'added {tag} {sid}' + (f' -> {eid}' if eid else ''))
+        for tag, sid, eid in set(oa.get(mid, [])) - set(ob.get(mid, [])):
+            k = 0
+            for m in re.finditer(r'\n[ \t]*<%s\b[^>]*?/>' % tag, text):
+                el = m.group(0)
+                if f'startid="{sid}"' in el and (eid is None or f'endid="{eid}"' in el):
+                    text = text[:m.start()] + text[m.end():]; k = 1
+                    break
+            log.append(f'removed {tag} {sid}' if k else f'!! could not remove {tag} {sid}')
 
     # 5. structure the script does not handle
     la = {(m.get('n'), l.get('type')) for m in A.iter(NS + 'measure') for l in m.iter(NS + 'layer')}
