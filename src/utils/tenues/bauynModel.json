@@ -1,0 +1,106 @@
+{
+  "source": "Bauyn manuscript (prelude7, prelude10): 108 traced tenues",
+  "units": "staff spaces; x right, y up",
+  "start": {
+    "gap": 1.2969,
+    "gapSd": 1.0087,
+    "dy": -0.2263,
+    "dySd": 0.7417
+  },
+  "rise": {
+    "coef": [
+      0.0789,
+      0.6019,
+      -0.0152
+    ],
+    "sd": 1.7291,
+    "maxRun": 12
+  },
+  "shape": {
+    "features": [
+      "1",
+      "clip(hpos,-4,4)/4",
+      "min(L,16)/8",
+      "clip(hpos,-4,4)/4 * clip(1-L/8,0,1)"
+    ],
+    "coef": [
+      [
+        0.1905,
+        -0.0007,
+        0.8624,
+        0.1347
+      ],
+      [
+        0.2267,
+        0.1952,
+        -0.1075,
+        -0.0113
+      ],
+      [
+        0.015,
+        -0.0631,
+        -0.0594,
+        -0.0972
+      ],
+      [
+        -0.2866,
+        0.509,
+        0.3532,
+        0.7273
+      ]
+    ],
+    "pcs": [
+      [
+        -0.0208,
+        0.5466,
+        0.3645,
+        0.7536
+      ],
+      [
+        0.6334,
+        0.5606,
+        -0.5147,
+        -0.1401
+      ],
+      [
+        -0.4263,
+        0.6082,
+        0.3007,
+        -0.5983
+      ],
+      [
+        0.6455,
+        -0.1308,
+        0.7154,
+        -0.2333
+      ]
+    ],
+    "pcSd": [
+      0.2483,
+      0.2154,
+      0.1065,
+      0.0625
+    ],
+    "maxBulgeLength": 20
+  },
+  "endAboveTop": {
+    "median": 0.6571,
+    "q75": 2.666,
+    "p90": 3.6543
+  },
+  "endTangent": {
+    "note": "long tenues end rising or flat; short ones may hook",
+    "fromLength": 6,
+    "fullLength": 8,
+    "minAngle": 0,
+    "maxDropAfterPeak": 0.3
+  },
+  "pen": {
+    "nibAngle": 42,
+    "hairline": 0.1117,
+    "full": 0.3076,
+    "entry": 0.1,
+    "exit": 0.35,
+    "exitWidth": 0.35
+  }
+}

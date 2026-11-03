@@ -4,8 +4,7 @@ import { loadVerovio } from './loadVerovio.mts'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { VerovioToolkit } from 'verovio/esm';
 import './App.css'
-import * as d3 from 'd3'
-import { ScoreNode, insertTenues, removeTenues } from './utils/StrokeEngine';
+import { insertTenues, removeTenues } from './utils/tenues/dom';
 import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
 import { insertShadowSemibreves } from './utils/insertShadowSemibreves';
@@ -230,15 +229,10 @@ const Work = ({ id }: WorkProps) => {
 
   const [position, setPosition] = useState<number>(150)
 
-  const strokeSimulation = useRef<d3.Simulation<ScoreNode, undefined>>()
   const verovio = useRef<HTMLDivElement>(null)
 
   const hideTenues = () => {
     if (!verovio.current) return
-    if (strokeSimulation.current) {
-      strokeSimulation.current.stop()
-    }
-
     removeTenues(verovio.current.querySelector('svg') as SVGElement)
   }
 
@@ -298,16 +292,11 @@ const Work = ({ id }: WorkProps) => {
   }, [scoreSVG, facsimile])
 
   useLayoutEffect(() => {
-    const showTenues = (tendency: 'up' | 'equal') => {
+    // Both the semi-measured and the unmeasured view draw
+    // tenues following the practice of the Bauyn manuscript.
+    const showTenues = () => {
       if (!verovio.current) return
-
-      hideTenues()
-
-      strokeSimulation.current = insertTenues(
-        verovio.current.querySelector('svg') as SVGElement,
-        position - 150,
-        tendency
-      )
+      insertTenues(verovio.current.querySelector('svg') as SVGElement)
     }
 
     if (position === 300) {
@@ -321,11 +310,8 @@ const Work = ({ id }: WorkProps) => {
       displaceNotes(position - 150, toolkit!)
     }
 
-    if (position > 250) {
-      setTimeout(showTenues, 100, 'up')
-    }
-    else if (position > 200) {
-      setTimeout(showTenues, 100, 'equal')
+    if (position > 200) {
+      setTimeout(showTenues, 100)
     }
     else {
       hideTenues()
