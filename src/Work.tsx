@@ -271,6 +271,9 @@ const Work = ({ id }: WorkProps) => {
 
     const mei = new XMLSerializer().serializeToString(meiDoc)
     toolkit.setOptions({
+      // one tall page (Verovio's maximum height), trimmed to the content:
+      // the app renders and decorates a single SVG page
+      pageHeight: 60000,
       adjustPageHeight: true,
       svgHtml5: true,
       svgViewBox: true,
