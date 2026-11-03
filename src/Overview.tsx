@@ -3,6 +3,10 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import './Overview.css'
 
+/** The table reads at a smaller size on a phone, where three columns share little room. */
+const cell = { fontSize: { xs: 16, sm: 20 }, px: { xs: 1, sm: 2 } }
+const headCell = { ...cell, fontWeight: 'bold' }
+
 interface SourceInfo {
     siglum: string
     svg: string | null
@@ -52,18 +56,18 @@ export const Overview = () => {
             <Table>
                 <TableHead>
                     <TableRow >
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Title</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Sources</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', fontSize: '20px' }}>Encoder</TableCell>
+                        <TableCell sx={headCell}>Title</TableCell>
+                        <TableCell sx={headCell}>Sources</TableCell>
+                        <TableCell sx={headCell}>Encoder</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {works.map(work => {
                         return (
                             <TableRow key={`workItem_${work.id}`}>
-                                <TableCell sx={{ fontSize: '20px' }}><Link to={work.id}>{work.title}</Link></TableCell>
-                                <TableCell sx={{ fontSize: '20px' }}>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
-                                <TableCell sx={{ fontSize: '20px' }}>{work.encoder}</TableCell>
+                                <TableCell sx={cell}><Link to={work.id}>{work.title}</Link></TableCell>
+                                <TableCell sx={cell}>{work.sources.map(s => s.siglum).join('| ')}</TableCell>
+                                <TableCell sx={cell}>{work.encoder}</TableCell>
                             </TableRow>
                         )
                     })}

@@ -5,15 +5,8 @@ import './index.css'
 import {
   createBrowserRouter,
   RouterProvider,
-  useParams,
 } from 'react-router-dom';
-import Work from './Work.tsx';
-
-const WorkRouter = () => {
-  const { workId } = useParams()
-  if (!workId) return <p>not found</p>
-  return <Work id={workId} />
-}
+import { WorkRoute } from './WorkRoute.tsx';
 
 const router = createBrowserRouter(
   [
@@ -27,7 +20,7 @@ const router = createBrowserRouter(
     },
     {
       path: '/:workId',
-      element: <WorkRouter />
+      element: <WorkRoute />
     }
   ],
   {

@@ -1,5 +1,9 @@
-#svg1 {
+/* score and facsimile take the width of their panel, and as much height as that asks */
+#score svg,
+.facsimile svg {
+  display: block;
   width: 100%;
+  height: auto;
 }
 
 .with-glow {
@@ -7,22 +11,67 @@
   filter: url(#purple-glow);
 }
 
-.notehead:hover {
-  filter: url(#purple-glow);
+/*
+ * A note is hovered over wherever it is drawn: the staff lines across it let the
+ * pointer through, and a hollow head takes it in its middle too, where supported.
+ */
+#score .staff > path {
+  pointer-events: none;
 }
 
-path:hover {
-  filter: url(#purple-glow);
+#score .notehead use {
+  pointer-events: bounding-box;
 }
 
-.notehead:hover {
-  opacity: 1;
+/* where there is no mouse, a hover would only stick to whatever was tapped last */
+@media (hover: hover) {
+  .notehead:hover {
+    filter: url(#purple-glow);
+  }
+
+  path:hover {
+    filter: url(#purple-glow);
+  }
+
+  .notehead:hover {
+    opacity: 1;
+    fill: darkred;
+    cursor: pointer;
+    stroke-width: 2;
+  }
+
+  .notehead path:hover {
+    stroke-width: 2;
+  }
+}
+
+/* the note tapped on a touch screen, or the notes of the trace tapped in the facsimile */
+.notehead.selected {
   fill: darkred;
-  cursor: pointer;
-  stroke-width: 2;
+  filter: url(#score-glow);
 }
 
-.notehead path:hover {
-  stroke-width: 2;
+
+/*
+ * Travelling into the source: the engraving fades (--engraving), while the
+ * heads of the notes linked to the facsimile travel, and dissolve at last (--heads).
+ * What the view hides (opacity="0") stays hidden.
+ */
+#score svg[data-morph] :is(path, use, polygon, ellipse, text):not([opacity="0"]) {
+  opacity: var(--engraving);
 }
 
+#score svg[data-morph] .linked > .notehead > use {
+  opacity: var(--heads);
+}
+
+/* in the manuscript, the note hovered over or tapped shows the editors' reading of it */
+#score svg[data-morph] .linked > .notehead.selected > use {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  #score svg[data-morph] .linked > .notehead:hover > use {
+    opacity: 1;
+  }
+}
