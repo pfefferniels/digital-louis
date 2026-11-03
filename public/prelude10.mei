@@ -404,7 +404,12 @@
                             </note>
                             <beam xml:id="beam-1709383215">
                                <note xml:id="note-1540176391" dur="8" oct="4" pname="d" corresp="#path1397-p-340" precedes="#note-0109834948" />
-                               <note xml:id="note-1920137498" dur="8" oct="4" pname="c"  />
+                               <note xml:id="grace-ed-r1gg0id" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-ed-wntzt7d" precedes="#grace-ed-z0ubtco" />
+                               <note xml:id="grace-ed-z0ubtco" type="ornam" grace="unknown" dur="4" oct="3" pname="b" corresp="#path1397-ed-z8wgpwv" />
+                               <note xml:id="grace-ed-n4xl71p" type="ornam" grace="unknown" dur="4" oct="4" pname="c" corresp="#path1397-ed-r6e3g3w" />
+                               <note xml:id="grace-ed-uptj5aq" type="ornam" grace="unknown" dur="4" oct="3" pname="a" corresp="#path1397-ed-n53w9gu" />
+                               <note xml:id="grace-ed-wyl27s4" type="ornam" grace="unknown" dur="4" oct="4" pname="d" corresp="#path1397-ed-ezcc7ps" />
+                               <note xml:id="note-1920137498" dur="8" oct="4" pname="c" corresp="#path1397-ed-5n92r02" />
                             </beam>
                         </layer>
                      </staff>
@@ -450,7 +455,7 @@
                            <note xml:id="note-2095292694" dur="1" oct="4" pname="a" corresp="#path1397-p-401" precedes="#note-1553854374" />
                         </layer>
                         <layer type="altus" n="2">
-                           <note xml:id="note-1836230876" dur="4" oct="3" pname="b"  />
+                           <note xml:id="note-1836230876" dur="4" oct="3" pname="b" corresp="#path1397-ed-jb9igmj" />
                            <note xml:id="note-1997904832" dur="4" oct="4" pname="e" corresp="#path1397-p-367" precedes="#note-0765101901">
                               <accid xml:id="accid-0191655767" accid="n" />
                            </note>
@@ -469,7 +474,7 @@
                            <note xml:id="note-1553854374" dur="2" oct="3" pname="f" corresp="#path1397-p-432" precedes="#note-4128955989" />
                         </layer>
                         <layer type="bassus" n="6">
-                           <note xml:id="note-0424165477" dur="2" oct="2" pname="e"  />
+                           <note xml:id="note-0424165477" dur="2" oct="2" pname="e" corresp="#path1397-ed-a8hvd72" />
                            <note xml:id="note-0154010764" dur="2" oct="2" pname="e"  />
                            <note xml:id="note-0543944552" dur="1" oct="2" pname="f" corresp="#path1397-p-430" precedes="#note-1854636649" />
                         </layer>
