@@ -105,9 +105,21 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
 
   document.querySelectorAll('[data-precedes]').forEach(el => el.removeAttribute('data-visited'));
 
-  let nextNotes = currentNotes[0].getAttribute('data-precedes')?.split(' ').map(noteId => {
-    return document.querySelector(`.note[data-id="${noteId.slice(1)}"]`);
-  });
+  // The notes read next: the @precedes targets of every note in the
+  // current group (notes sounding together), not yet visited.
+  const followersOf = (group: (Element | null)[]) => {
+    const ids = new Set<string>();
+    for (const note of group) {
+      for (const t of (note?.getAttribute('data-precedes') || '').split(' ')) {
+        if (t) ids.add(t.slice(1));
+      }
+    }
+    return [...ids]
+      .map(id => document.querySelector(`.note[data-id="${id}"]`))
+      .filter((n): n is Element => n !== null && !group.includes(n) && !n.hasAttribute('data-visited'));
+  }
+
+  let nextNotes: Element[] | undefined = followersOf(currentNotes);
   if (!nextNotes || !nextNotes.length) {
     console.log('no next notes found');
   }
@@ -124,7 +136,7 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
 
     const currentNoteId = currentNotes[0]?.getAttribute('data-id');
     if (!currentNote || !currentNoteId || currentNote === nextNotes[0]) break;
-    currentNote.setAttribute('data-visited', 'true');
+    currentNotes.forEach(note => note?.setAttribute('data-visited', 'true'));
 
     const scoreTime = calculateScoreTime(currentNote, toolkit) ?? prevScoreTime
 
@@ -142,9 +154,7 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
     currentNotes = nextNotes;
     if (!currentNotes[0]) break;
 
-    nextNotes = currentNotes[0].getAttribute('data-precedes')?.split(' ').map(noteId => {
-      return document.querySelector(`.note[data-id="${noteId.slice(1)}"]`);
-    });
+    nextNotes = followersOf(currentNotes);
   }
 
   redoBeams()
