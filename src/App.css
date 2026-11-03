@@ -1,5 +1,6 @@
 /* score and facsimile take the width of their panel, and as much height as that asks */
 #score svg,
+.score-ghost svg,
 .facsimile svg {
   display: block;
   width: 100%;
@@ -45,6 +46,28 @@
   }
 }
 
+/* the score as last drawn, fading out above the score drawn anew */
+.score-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* tenues are drawn once the view has come to rest */
+@keyframes appear {
+  from { opacity: 0; }
+}
+
+.tenue {
+  animation: appear 300ms ease-out;
+}
+
+.score-ghost .tenue {
+  animation: none;
+}
+
 /* the note tapped on a touch screen, or the notes of the trace tapped in the facsimile */
 .notehead.selected {
   fill: darkred;
@@ -61,17 +84,17 @@
   opacity: var(--engraving);
 }
 
-#score svg[data-morph] .linked > .notehead > use {
+#score svg[data-morph] .linked > .notehead use {
   opacity: var(--heads);
 }
 
 /* in the manuscript, the note hovered over or tapped shows the editors' reading of it */
-#score svg[data-morph] .linked > .notehead.selected > use {
+#score svg[data-morph] .linked > .notehead.selected use {
   opacity: 1;
 }
 
 @media (hover: hover) {
-  #score svg[data-morph] .linked > .notehead:hover > use {
+  #score svg[data-morph] .linked > .notehead:hover use {
     opacity: 1;
   }
 }

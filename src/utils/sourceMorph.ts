@@ -182,6 +182,12 @@ const reset = (svg: SVGSVGElement, morph: Morph) => {
     morphs.delete(svg)
 }
 
+/** Puts the score back as it is engraved, without a trace of the source. */
+export const unmorph = (svg: SVGSVGElement) => {
+    const current = morphs.get(svg)
+    if (current) reset(svg, current)
+}
+
 /**
  * Draws the score `progress` of the way from its engraving (0) into the source (1),
  * the facsimile given as the SVG the viewer shows, fitted to what it draws.
@@ -189,7 +195,7 @@ const reset = (svg: SVGSVGElement, morph: Morph) => {
 export const morph = (svg: SVGSVGElement, facsimile: SVGSVGElement, progress: number) => {
     const current = morphs.get(svg)
     if (progress <= 0) {
-        if (current) reset(svg, current)
+        unmorph(svg)
         return
     }
     const state = current ?? prepare(svg, facsimile)

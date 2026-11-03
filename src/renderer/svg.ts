@@ -2,8 +2,10 @@
  * Writes a page as SVG markup, in the vocabulary the viewer selects by:
  * `.system > .measure > .staff > .layer > .note > .notehead`, `.stem`, `.accid`,
  * `.beam polygon`, `.ledgerLines`, `.tie`, `.barLine`, `data-id`, `data-next`, ...
- * Glyphs are <use> elements with x, y, width and height, referring to symbols
- * named by their SMuFL codepoint.
+ * Glyphs are <use> elements with width and height, referring to symbols named
+ * by their SMuFL codepoint, each placed by a group of its own: a browser moves
+ * a group far more cheaply than a <use>, which matters for every frame of a
+ * transition.
  */
 import type { Bezier, Drawing, Group, Primitive } from './drawing'
 import type { Point } from './geometry'
@@ -17,7 +19,7 @@ const unit = 100
 /** The margin around the page, in staff spaces. */
 const margin = 2
 
-interface SvgElement {
+export interface SvgElement {
     readonly name: string
     readonly attributes: Readonly<Record<string, string | number | undefined>>
     readonly children: readonly (SvgElement | string)[]
@@ -55,10 +57,9 @@ const primitive = (drawing: Primitive): SvgElement => {
     switch (drawing.kind) {
         case 'glyph': {
             const size = u(staffSpacesPerEm * drawing.scale)
-            return element('use', {
-                'xlink:href': `#${symbolId(drawing.glyph)}`,
-                x: u(drawing.origin.x), y: u(drawing.origin.y), width: size, height: size,
-            })
+            return element('g', { transform: `translate(${u(drawing.origin.x)} ${u(drawing.origin.y)})` }, [
+                element('use', { 'xlink:href': `#${symbolId(drawing.glyph)}`, width: size, height: size }),
+            ])
         }
         case 'line': return element('path', {
             d: `M${xy(drawing.from)} L${xy(drawing.to)}`,
@@ -108,9 +109,10 @@ const symbol = (name: GlyphName): SvgElement =>
         element('path', { transform: 'scale(1,-1)', d: glyphData(name).outline }),
     ])
 
-export const writeSvg = (page: Page): string => {
+/** The page as a tree of SVG elements, before it is written out. */
+export const svgTree = (page: Page): SvgElement => {
     const used = [...new Set(glyphsIn(page.content))]
-    return serialize(element('svg', {
+    return element('svg', {
         xmlns: 'http://www.w3.org/2000/svg',
         'xmlns:xlink': 'http://www.w3.org/1999/xlink',
         viewBox: `0 0 ${u(page.width + 2 * margin)} ${u(page.height + 2 * margin)}`,
@@ -119,5 +121,7 @@ export const writeSvg = (page: Page): string => {
         element('desc', {}, ['Engraved by the Digital Louis renderer']),
         element('defs', {}, used.map(symbol)),
         groupElement(page.content, { transform: `translate(${u(margin)}, ${u(margin)})` }),
-    ]))
+    ])
 }
+
+export const writeSvg = (page: Page): string => serialize(svgTree(page))
