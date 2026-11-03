@@ -14,7 +14,6 @@ import { analyse, Analysis } from './analysis'
 import { layOutHorizontally, SystemLayout } from './horizontal'
 import { readScore } from './mei'
 import { engravePage, PageOptions } from './page'
-import { contentStartFor } from './staff'
 import { writeSvg } from './svg'
 
 export { UnsupportedMei } from './mei'
@@ -32,10 +31,7 @@ export interface PreparedScore {
 
 export const prepare = (document: Document, options: RenderOptions = {}): PreparedScore => {
     const analysis = analyse(readScore(document))
-    const page: PageOptions = {
-        systemWidth: options.systemWidth ?? 110,
-        contentStart: contentStartFor(analysis.score),
-    }
+    const page: PageOptions = { systemWidth: options.systemWidth ?? 110 }
     return { analysis, systems: layOutHorizontally(analysis, page), options: page }
 }
 

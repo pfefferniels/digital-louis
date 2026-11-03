@@ -3,11 +3,12 @@
  * module that touches the DOM. It is strict: whatever lies outside the dialect
  * is reported as UnsupportedMei rather than silently drawn wrong.
  */
-import { isDefined } from './algorithms'
+import { isDefined, splitGreedily } from './algorithms'
 import {
     Accidental, Barline, Beam, Bracket, Chord, Clef, ClefShape, ControlEvent, Direction, Duration, ElementId,
-    elementId, FiguredBass, Layer, LayerEvent, Measure, Meter, Note, NoteValue, Ornament, OrnamentSign, Pitch,
-    PitchName, Place, Rest, RestValue, Score, Space, Staff, StaffDef, staffNumber, StemDirection, Tie, Timestamp,
+    elementId, FiguredBass, KeySignature, Layer, LayerEvent, Measure, Meter, noKeySignature, Note, NoteValue,
+    Ornament, OrnamentSign, Pitch, PitchName, Place, Rest, RestValue, Score, Space, Staff, StaffChange, StaffDef,
+    StaffNumber, staffNumber, StemDirection, Tie, Timestamp,
 } from './model'
 
 const MEI = 'http://www.music-encoding.org/ns/mei'
@@ -114,6 +115,34 @@ const barlines: Partial<Record<string, Barline>> = { single: 'single', end: 'end
 const mordentSigns: Partial<Record<string, OrnamentSign>> = { lower: 'lowerMordent', upper: 'upperMordent' }
 
 // ---------------------------------------------------------------------------
+// Clefs and key signatures
+
+const readClef = (element: Element): Clef =>
+    ({ shape: requiredOneOf(element, 'shape', clefShapes), line: requiredNumber(element, 'line') })
+
+/** The clef a staff definition gives, as a <clef> or as attributes. */
+const clefOf = (staffDef: Element): Clef | undefined => {
+    const clef = childrenNamed(staffDef, 'clef')[0]
+    if (clef) return readClef(clef)
+    return staffDef.hasAttribute('clef.shape')
+        ? { shape: requiredOneOf(staffDef, 'clef.shape', clefShapes), line: requiredNumber(staffDef, 'clef.line') }
+        : undefined
+}
+
+const readKeySignature = (element: Element, sig: string): KeySignature => {
+    if (sig === '0') return noKeySignature
+    const match = /^([1-7])([sf])$/.exec(sig) ?? fail(element, `key signature "${sig}" is not supported`)
+    return { accidental: match[2] === 's' ? 'sharp' : 'flat', count: Number(match[1]) }
+}
+
+/** The key signature a staff or score definition gives, as a <keySig> or as @key.sig. */
+const keyOf = (definition: Element): KeySignature | undefined => {
+    const keySig = childrenNamed(definition, 'keySig')[0]
+    const sig = keySig ? optional(keySig, 'sig') : optional(definition, 'key.sig')
+    return sig === undefined ? undefined : readKeySignature(keySig ?? definition, sig)
+}
+
+// ---------------------------------------------------------------------------
 // Layer content
 
 const readDuration = (element: Element): Duration | undefined => {
@@ -212,6 +241,7 @@ const readLayerContent = (element: Element, grace: boolean): LayerContent => {
         case 'space': return single(readSpace(element))
         case 'beam': return readBeam(element, grace)
         case 'graceGrp': return concatenate(children(element).map(child => readLayerContent(child, true)))
+        case 'clef': return single({ kind: 'clef', id: optionalId(element), clef: readClef(element) })
         default: return fail(element, 'not part of the dialect')
     }
 }
@@ -297,44 +327,55 @@ const readControl = (element: Element): ControlEvent[] => {
     }
 }
 
-const readMeasure = (element: Element, breakBefore: boolean): Measure => ({
+const readMeasure = (element: Element, breakBefore: boolean, changes: readonly StaffChange[]): Measure => ({
     id: optionalId(element),
     staves: childrenNamed(element, 'staff').map(readStaff),
     controls: children(element).filter(child => child.localName !== 'staff').flatMap(readControl),
     rightBarline: oneOf(element, 'right', barlines) ?? 'single',
     breakBefore,
+    changes,
 })
 
-const readSection = (section: Element): Measure[] => {
-    const elements = children(section)
-    return elements.flatMap((element, i) => {
-        switch (element.localName) {
-            case 'measure': return [readMeasure(element, elements[i - 1]?.localName === 'sb')]
-            case 'sb': return []
-            default: return fail(element, 'not part of the dialect')
+const readStaffChange = (staffDef: Element): StaffChange =>
+    ({ staff: staffNumber(requiredNumber(staffDef, 'n')), clef: clefOf(staffDef), key: keyOf(staffDef) })
+
+/** What a score or staff definition between measures changes; a key of the score changes every staff. */
+const readChanges = (element: Element, staves: readonly StaffNumber[]): StaffChange[] => {
+    switch (element.localName) {
+        case 'staffDef': return [readStaffChange(element)]
+        case 'scoreDef': {
+            const key = keyOf(element)
+            return [
+                ...(key ? staves.map(staff => ({ staff, clef: undefined, key })) : []),
+                ...Array.from(element.getElementsByTagNameNS(MEI, 'staffDef')).map(readStaffChange),
+            ]
         }
-    })
+        case 'sb': return []
+        default: return fail(element, 'not part of the dialect')
+    }
 }
+
+/** Each measure, with the system break and the changes of definition that come before it. */
+const readSection = (section: Element, staves: readonly StaffNumber[]): Measure[] =>
+    splitGreedily(children(section), (_, run) => run[run.length - 1].localName === 'measure')
+        .flatMap(run => {
+            const [last, before] = [run[run.length - 1], run.slice(0, -1)]
+            if (last.localName !== 'measure') return before.length > 0 ? fail(last, 'nothing follows it') : []
+            return [readMeasure(
+                last,
+                before.some(element => element.localName === 'sb'),
+                before.flatMap(element => readChanges(element, staves))
+            )]
+        })
 
 // ---------------------------------------------------------------------------
 // Score definition
 
-const readClef = (staffDef: Element): Clef => {
-    const clef = childrenNamed(staffDef, 'clef')[0]
-    return clef
-        ? { shape: requiredOneOf(clef, 'shape', clefShapes), line: requiredNumber(clef, 'line') }
-        : { shape: requiredOneOf(staffDef, 'clef.shape', clefShapes), line: requiredNumber(staffDef, 'clef.line') }
-}
-
-const expectNoKeySignature = (staffDef: Element): void => {
-    const sig = childrenNamed(staffDef, 'keySig').map(keySig => optional(keySig, 'sig'))[0] ?? optional(staffDef, 'key.sig')
-    if (sig !== undefined && sig !== '0') fail(staffDef, `key signature "${sig}" is not supported yet`)
-}
-
-const readStaffDef = (element: Element): StaffDef => {
-    expectNoKeySignature(element)
-    return { n: staffNumber(requiredNumber(element, 'n')), clef: readClef(element) }
-}
+const readStaffDef = (element: Element, scoreDef: Element): StaffDef => ({
+    n: staffNumber(requiredNumber(element, 'n')),
+    clef: clefOf(element) ?? fail(element, 'the staff has no clef'),
+    key: keyOf(element) ?? keyOf(scoreDef) ?? noKeySignature,
+})
 
 const readMeter = (scoreDef: Element, staffDefs: readonly Element[]): Meter => {
     const meterSig = staffDefs.flatMap(staffDef => childrenNamed(staffDef, 'meterSig'))[0]
@@ -357,11 +398,12 @@ export const readScore = (document: Document): Score => {
     expectChildren(score, ['scoreDef', 'section'])
     const scoreDef = requiredChild(score, 'scoreDef')
     const staffDefs = Array.from(scoreDef.getElementsByTagNameNS(MEI, 'staffDef'))
+    const staves = staffDefs.map(staffDef => readStaffDef(staffDef, scoreDef))
 
     return {
         title: readTitle(mei, scoreDef),
-        staves: staffDefs.map(readStaffDef),
+        staves,
         meter: readMeter(scoreDef, staffDefs),
-        measures: childrenNamed(score, 'section').flatMap(readSection),
+        measures: childrenNamed(score, 'section').flatMap(section => readSection(section, staves.map(staff => staff.n))),
     }
 }

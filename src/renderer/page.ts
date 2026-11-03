@@ -5,16 +5,16 @@
 import { adjacentPairs, exclusiveScan, inclusiveScan, isDefined, lerp } from './algorithms'
 import type { Analysis } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
-import { boundsOf, Drawing, group, Group, line, text, translate } from './drawing'
+import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
 import { interpolate, Slot, SystemLayout } from './horizontal'
 import { engravingDefaults } from './leipzig'
 import type { Barline } from './model'
-import { EngravedStaff, engraveStaff } from './staff'
+import { markSignature, systemSignature } from './signatures'
+import { engraveStaff } from './staff'
 
 export interface PageOptions {
     readonly systemWidth: number
-    readonly contentStart: number
 }
 
 export interface Page {
@@ -46,6 +46,10 @@ const barlineLines = (x: number, style: Barline, top: number): Drawing[] => {
     }
 }
 
+/** What is drawn on a staff, its lines aside. */
+const obstaclesOn = (staff: Group): Box[] =>
+    staff.children.filter(child => child.kind !== 'line').flatMap(primitiveBoxes)
+
 interface EngravedSystem {
     readonly drawing: Group
     readonly box: Box
@@ -61,7 +65,7 @@ const engraveSystem = (analysis: Analysis, layout: SystemLayout, t: number, opti
     const staffIndices = score.staves.map((_, i) => i)
 
     const measures = layout.measures.map((measure, k) => {
-        const staves = staffIndices.map((staff): EngravedStaff => engraveStaff({
+        const staves = staffIndices.map(staff => engraveStaff({
             analysis,
             measure,
             staff,
@@ -69,23 +73,28 @@ const engraveSystem = (analysis: Analysis, layout: SystemLayout, t: number, opti
             t,
             left: k === 0 ? 0 : barlines[k - 1],
             right: barlines[k],
-            withClef: k === 0,
+            signatures: [
+                ...(k === 0 ? [systemSignature(analysis.measureStates[measure][staff])] : []),
+                ...[...layout.marks]
+                    .filter(([mark]) => analysis.marks[mark].measure === measure && analysis.marks[mark].staff === staff)
+                    .map(([mark, slot]) => markSignature(analysis.marks[mark], at(slot, t))),
+            ],
         }))
         return { measure, staves }
     })
 
     const staffBoxes = new Map(staffIndices.map(staff => [staff, unionAll(
-        measures.map(({ staves }) => boundsOf(staves[staff].drawing)).filter(isDefined)
+        measures.map(({ staves }) => boundsOf(staves[staff])).filter(isDefined)
     ) ?? emptyStaff]))
 
     const controls = engraveControls({
         analysis,
         measures: layout.measures,
         placed,
-        noteBoxes: new Map(measures.flatMap(({ staves }) => staves.flatMap(staff => [...staff.noteBoxes]))),
+        obstacles: new Map(staffIndices.map(staff => [staff, measures.flatMap(({ staves }) => obstaclesOn(staves[staff]))])),
         staffBoxes,
         timeX: time => lerp(interpolate(layout.time.measured, time), interpolate(layout.time.reading, time), t),
-        lineStart: options.contentStart,
+        lineStart: layout.contentStart,
         lineEnd: options.systemWidth,
     })
 
@@ -110,7 +119,7 @@ const engraveSystem = (analysis: Analysis, layout: SystemLayout, t: number, opti
     const drawing = group(['system'], [
         systemLine,
         ...measures.map(({ measure, staves }, k) => group(['measure'], [
-            ...staves.map((staff, s) => translate(staff.drawing, 0, tops[s])),
+            ...staves.map((staff, s) => translate(staff, 0, tops[s])),
             group(['barLine'], tops.flatMap(top => barlineLines(barlines[k], score.measures[measure].rightBarline, top))),
             ...controls.filter(control => control.measure === measure).map(onStaff),
         ], { id: score.measures[measure].id })),

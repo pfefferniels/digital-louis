@@ -33,7 +33,7 @@ GLYPHS = {
     'restHalf': 'E4E4',
     'restQuarter': 'E4E5',
     'rest8th': 'E4E6',
-    'ornamentTrill': 'E566',
+    'ornamentTremblement': 'E56E',
     'ornamentShortTrill': 'E56C',
     'ornamentMordent': 'E56D',
 }

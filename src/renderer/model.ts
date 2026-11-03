@@ -80,7 +80,14 @@ export interface Space {
     readonly duration: Duration
 }
 
-export type LayerEvent = Note | Chord | Rest | Space
+/** A clef change within a layer: the staff reads in the new clef from here on. */
+export interface ClefChange {
+    readonly kind: 'clef'
+    readonly id: ElementId | undefined
+    readonly clef: Clef
+}
+
+export type LayerEvent = Note | Chord | Rest | Space | ClefChange
 
 export interface Beam {
     readonly id: ElementId | undefined
@@ -156,6 +163,13 @@ export type ControlEvent = Tie | Ornament | FiguredBass | Direction | Bracket
 
 export type Barline = 'single' | 'end'
 
+/** A new clef or key signature for a staff, taking effect at the start of a measure. */
+export interface StaffChange {
+    readonly staff: StaffNumber
+    readonly clef: Clef | undefined
+    readonly key: KeySignature | undefined
+}
+
 export interface Measure {
     readonly id: ElementId | undefined
     readonly staves: readonly Staff[]
@@ -163,6 +177,8 @@ export interface Measure {
     readonly rightBarline: Barline
     /** whether an encoded system break (<sb/>) comes right before the measure */
     readonly breakBefore: boolean
+    /** what the score definitions before the measure change */
+    readonly changes: readonly StaffChange[]
 }
 
 export type ClefShape = 'C' | 'F' | 'G'
@@ -173,9 +189,20 @@ export interface Clef {
     readonly line: number
 }
 
+export type KeyAccidental = Exclude<Accidental, 'natural'>
+
+/** A key signature of `count` sharps or flats; with none of either it has `count` 0. */
+export interface KeySignature {
+    readonly accidental: KeyAccidental
+    readonly count: number
+}
+
+export const noKeySignature: KeySignature = { accidental: 'sharp', count: 0 }
+
 export interface StaffDef {
     readonly n: StaffNumber
     readonly clef: Clef
+    readonly key: KeySignature
 }
 
 export interface Meter {
@@ -197,7 +224,8 @@ export const notesOf = (event: LayerEvent): readonly Note[] => {
         case 'note': return [event]
         case 'chord': return event.notes
         case 'rest':
-        case 'space': return []
+        case 'space':
+        case 'clef': return []
     }
 }
 

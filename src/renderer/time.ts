@@ -20,9 +20,9 @@ const lengthOf = (duration: Duration): Rational =>
 const isGrace = (event: LayerEvent): boolean =>
     (event.kind === 'note' && event.grace) || (event.kind === 'chord' && event.notes.every(note => note.grace))
 
-/** The time an event takes up in its layer: none for grace notes. */
+/** The time an event takes up in its layer: none for grace notes and clef changes. */
 const extentOf = (event: LayerEvent): Rational =>
-    isGrace(event) ? Rational.zero : lengthOf(event.duration)
+    event.kind === 'clef' || isGrace(event) ? Rational.zero : lengthOf(event.duration)
 
 /**
  * An event placed in notated time. Grace notes take no time: they lead into the

@@ -5,22 +5,16 @@
  */
 import { clamp, isDefined, splitGreedily } from './algorithms'
 import { Analysis, BeamGroup, isRolled, NoteHead, staffIndex } from './analysis'
-import { boundsOf, Drawing, glyph, group, Group, line } from './drawing'
-import type { Box, Point } from './geometry'
-import { glyphWidth } from './glyph'
+import { Drawing, glyph, group, Group, line } from './drawing'
+import type { Point } from './geometry'
 import { engravingDefaults } from './leipzig'
-import { ElementId, Layer, LayerEvent, Note, notesOf, Score, StemDirection } from './model'
+import { ElementId, Layer, LayerEvent, Note, notesOf, StemDirection } from './model'
 import {
     dotCenters, dotRadius, flagAt, headOrigin, headWidth, isPlacedNote, PlacedAccidental, placeAccidentals, PlacedHead,
     stemLength, stemRoot, stemTip,
 } from './noteheads'
-import { clefGlyphs, clefPosition, positionY, StaffPosition, topLine } from './pitch'
-
-const clefX = 0.8
-
-/** Where the music begins on a system: after the widest clef. */
-export const contentStartFor = (score: Score): number =>
-    clefX + Math.max(...score.staves.map(staff => glyphWidth(clefGlyphs[staff.clef.shape]))) + 0.6
+import { positionY, StaffPosition, topLine } from './pitch'
+import { PlacedGlyph, Signature } from './signatures'
 
 export interface StaffScene {
     readonly analysis: Analysis
@@ -33,13 +27,8 @@ export interface StaffScene {
     readonly t: number
     readonly left: number
     readonly right: number
-    readonly withClef: boolean
-}
-
-export interface EngravedStaff {
-    readonly drawing: Group
-    /** the box of each note as drawn, for what is placed against notes */
-    readonly noteBoxes: ReadonlyMap<ElementId, Box>
+    /** the clef and key a system begins with, and the changes of clef or key on the staff in the measure */
+    readonly signatures: readonly Signature[]
 }
 
 /** A stem's centre line, from where it leaves the head to its tip. */
@@ -156,7 +145,8 @@ const tonesOf = (scene: LayerScene, event: LayerEvent): PlacedHead<NoteHead>[] =
  */
 const drawEvent = (scene: LayerScene, event: LayerEvent, beamed?: Stem): Drawing[] => {
     switch (event.kind) {
-        case 'space': return []
+        case 'space':
+        case 'clef': return []
         case 'rest': {
             const placed = scene.placed.get(event.id)
             if (placed === undefined) return []
@@ -252,19 +242,18 @@ const drawLedgerLines = (heads: readonly PlacedHead<NoteHead>[]): Drawing[] => {
     return [...side('above'), ...side('below')]
 }
 
+const glyphsOf = (glyphs: readonly PlacedGlyph[]): Drawing[] =>
+    glyphs.map(({ glyph: name, origin, scale }) => glyph(name, origin, scale))
+
+const drawSignature = (signature: Signature): Drawing[] => [
+    ...(signature.clef.length > 0 ? [group(['clef'], glyphsOf(signature.clef))] : []),
+    ...(signature.key.length > 0 ? [group(['keySig'], glyphsOf(signature.key))] : []),
+]
+
 const staffLines = (left: number, right: number): Drawing[] =>
     [0, 1, 2, 3, 4].map(y => line({ x: left, y }, { x: right, y }, engravingDefaults.staffLineThickness))
 
-const noteBox = (drawing: Group): [ElementId, Box][] => {
-    if (!drawing.classes.includes('note') || drawing.id === undefined) return []
-    const box = boundsOf(drawing)
-    return box ? [[drawing.id, box]] : []
-}
-
-const notesIn = (drawing: Drawing): [ElementId, Box][] =>
-    drawing.kind === 'group' ? [...noteBox(drawing), ...drawing.children.flatMap(notesIn)] : []
-
-export const engraveStaff = (scene: StaffScene): EngravedStaff => {
+export const engraveStaff = (scene: StaffScene): Group => {
     const { analysis, measure, staff } = scene
     const score = analysis.score
     const content = score.measures[measure].staves.find(candidate => staffIndex(score, candidate.n) === staff)
@@ -275,17 +264,12 @@ export const engraveStaff = (scene: StaffScene): EngravedStaff => {
         t: scene.t,
     }
     const beams = analysis.beams.filter(beam => beam.measure === measure && beam.staff === staff)
-    const clef = score.staves[staff].clef
     const layers = (content?.layers ?? []).map(layer => drawLayer(layerScene, layer, beams))
 
-    const drawing = group(['staff'], [
+    return group(['staff'], [
         ...staffLines(scene.left, scene.right),
-        ...(scene.withClef
-            ? [group(['clef'], [glyph(clefGlyphs[clef.shape], { x: clefX, y: positionY(clefPosition(clef)) })])]
-            : []),
+        ...scene.signatures.flatMap(drawSignature),
         ...drawLedgerLines(placed.filter(isPlacedNote)),
         ...layers,
     ], { data: { n: String(score.staves[staff].n) } })
-
-    return { drawing, noteBoxes: new Map(layers.flatMap(notesIn)) }
 }

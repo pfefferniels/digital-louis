@@ -5,13 +5,13 @@
 import { clamp } from './algorithms'
 import { Analysis, NoteHead, staffIndex } from './analysis'
 import { Drawing, glyph, group, line, text } from './drawing'
-import type { Box, Point } from './geometry'
+import { Box, overlaps, Point } from './geometry'
 import { glyphBox, GlyphName } from './glyph'
 import { engravingDefaults } from './leipzig'
 import type {
     Bracket, ControlEvent, Direction, ElementId, FiguredBass, Ornament, OrnamentSign, Place, Tie, Timestamp,
 } from './model'
-import { headBox, isNoteHead, PlacedHead } from './noteheads'
+import { headBox, isNoteHead, isPlacedNote, PlacedHead, stemRoot } from './noteheads'
 import { middleLine, positionY } from './pitch'
 
 /** A drawing that belongs to one staff of one measure, in the staff's own coordinates. */
@@ -27,7 +27,8 @@ export interface ControlScene {
     readonly measures: readonly number[]
     /** the heads of the system at their places */
     readonly placed: ReadonlyMap<ElementId, PlacedHead>
-    readonly noteBoxes: ReadonlyMap<ElementId, Box>
+    /** what is drawn on each staff, for ornaments to keep clear of */
+    readonly obstacles: ReadonlyMap<number, readonly Box[]>
     /** what the notes of each staff take up across the system */
     readonly staffBoxes: ReadonlyMap<number, Box>
     /** where notated time, in whole notes from the start of the score, falls on the system */
@@ -102,34 +103,65 @@ const drawTie = (scene: ControlScene, tie: Tie): StaffDrawing[] => {
 // ---------------------------------------------------------------------------
 // Ornaments
 
-const ornamentGlyphs: Readonly<Record<OrnamentSign, GlyphName>> = {
-    trill: 'ornamentTrill',
-    lowerMordent: 'ornamentMordent',
-    upperMordent: 'ornamentShortTrill',
+interface OrnamentStyle {
+    readonly glyph: GlyphName
+    readonly side: Place
+    readonly className: string
 }
 
-const ornamentClasses: Readonly<Record<OrnamentSign, string>> = {
-    trill: 'trill',
-    lowerMordent: 'mordent',
-    upperMordent: 'mordent',
+/**
+ * The ornaments as the Bauyn manuscript writes them: the tremblement as a short
+ * wavy line a little above its note, the pincé - the wavy line struck through -
+ * just below it.
+ */
+const ornamentStyles: Readonly<Record<OrnamentSign, OrnamentStyle>> = {
+    trill: { glyph: 'ornamentTremblement', side: 'above', className: 'trill' },
+    lowerMordent: { glyph: 'ornamentMordent', side: 'below', className: 'mordent' },
+    upperMordent: { glyph: 'ornamentShortTrill', side: 'above', className: 'mordent' },
 }
 
-/** Ornaments stand centred above their note, clear of the staff and of the note's stem. */
+/** Bauyn's signs are about as wide as one and a half noteheads. */
+const ornamentScale = 0.6
+
+/** How close a sign comes to its note, and how far it moves at a time to clear something in its way. */
+const ornamentGap = 0.35
+const ornamentStep = 0.25
+
+/**
+ * An ornament stands as close to its note as it can: over or under the head,
+ * on the far side of the note's own stem, and moving away from the head only
+ * as far as it must to clear the other heads, stems, accidentals and beams.
+ */
 const drawOrnament = (scene: ControlScene, measure: number, ornament: Ornament): StaffDrawing[] => {
     const placed = scene.placed.get(ornament.on)
     if (placed === undefined) return []
+    const { glyph: name, side, className } = ornamentStyles[ornament.sign]
     const head = headBox(placed)
-    const top = (scene.noteBoxes.get(ornament.on) ?? head).top
-    const name = ornamentGlyphs[ornament.sign]
-    const shape = glyphBox(name, { x: 0, y: 0 })
-    const origin = {
-        x: (head.left + head.right) / 2 - (shape.left + shape.right) / 2,
-        y: Math.min(-0.8, top - 0.6) - shape.bottom,
-    }
+    const shape = glyphBox(name, { x: 0, y: 0 }, ornamentScale)
+    const width = shape.right - shape.left
+    const centred = (head.left + head.right) / 2 - width / 2
+
+    const stem = isPlacedNote(placed) ? placed.head.stem : undefined
+    const stemX = isPlacedNote(placed) && stem ? stemRoot(placed, stem).x : undefined
+    const left = stemX === undefined ? centred
+        : side === 'above' && stem === 'up' ? Math.min(centred, stemX - ornamentGap - width)
+        : side === 'below' && stem === 'down' ? Math.max(centred, stemX + ornamentGap)
+        : centred
+
+    const originAt = (distance: number): Point => ({
+        x: left - shape.left,
+        y: side === 'above'
+            ? head.top - ornamentGap - distance - shape.bottom
+            : head.bottom + ornamentGap + distance - shape.top,
+    })
+    const obstacles = scene.obstacles.get(placed.head.staff) ?? []
+    const isClear = (origin: Point) => !obstacles.some(obstacle => overlaps(glyphBox(name, origin, ornamentScale), obstacle))
+    const origin = Array.from({ length: 40 }, (_, k) => originAt(k * ornamentStep)).find(isClear) ?? originAt(0)
+
     return [{
         staff: placed.head.staff,
         measure,
-        drawing: group([ornamentClasses[ornament.sign]], [glyph(name, origin)], { id: ornament.id }),
+        drawing: group([className], [glyph(name, origin, ornamentScale)], { id: ornament.id }),
     }]
 }
 

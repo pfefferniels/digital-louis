@@ -82,6 +82,13 @@ const textBox = ({ origin, text: content, size, anchor }: Extract<Primitive, { k
 const widened = (box: Box, by: number): Box =>
     ({ left: box.left - by, top: box.top - by, right: box.right + by, bottom: box.bottom + by })
 
+/** The boxes of the primitives a drawing is made of. */
+export const primitiveBoxes = (drawing: Drawing): Box[] => {
+    if (drawing.kind === 'group') return drawing.children.flatMap(primitiveBoxes)
+    const box = boundsOf(drawing)
+    return box ? [box] : []
+}
+
 export const boundsOf = (drawing: Drawing): Box | undefined => {
     switch (drawing.kind) {
         case 'group': return unionAll(drawing.children.map(boundsOf).filter(isDefined))
