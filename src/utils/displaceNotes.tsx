@@ -30,11 +30,12 @@ const followNoteUntil = (note: Element, predicate: (el: Element) => boolean) => 
     if (predicate(current)) {
       return current;
     }
-    const nextId = current.getAttribute('data-precedes');
+    // @precedes may point to several simultaneous notes; follow the first one
+    const nextId = current.getAttribute('data-precedes')?.split(' ')[0];
     if (!nextId) {
       return null;
     }
-    const next = document.querySelector(`.note[data-id=${nextId.slice(1)}`);
+    const next = document.querySelector(`.note[data-id="${nextId.slice(1)}"]`);
     if (!next) return null;
     current = next;
   }
@@ -105,7 +106,7 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
   document.querySelectorAll('[data-precedes]').forEach(el => el.removeAttribute('data-visited'));
 
   let nextNotes = currentNotes[0].getAttribute('data-precedes')?.split(' ').map(noteId => {
-    return document.querySelector(`.note[data-id=${noteId.slice(1)}`);
+    return document.querySelector(`.note[data-id="${noteId.slice(1)}"]`);
   });
   if (!nextNotes || !nextNotes.length) {
     console.log('no next notes found');
@@ -142,7 +143,7 @@ export const displaceNotes = (displacement: number, toolkit: VerovioToolkit) => 
     if (!currentNotes[0]) break;
 
     nextNotes = currentNotes[0].getAttribute('data-precedes')?.split(' ').map(noteId => {
-      return document.querySelector(`.note[data-id=${noteId.slice(1)}`);
+      return document.querySelector(`.note[data-id="${noteId.slice(1)}"]`);
     });
   }
 
