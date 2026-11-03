@@ -8,6 +8,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import Work from './Work.tsx';
+import { RendererPreview } from './RendererPreview.tsx';
 
 const WorkRouter = () => {
   const { workId } = useParams()
@@ -28,6 +29,10 @@ const router = createBrowserRouter(
     {
       path: '/:workId',
       element: <WorkRouter />
+    },
+    {
+      path: '/:workId/renderer',
+      element: <RendererPreview />
     }
   ],
   {

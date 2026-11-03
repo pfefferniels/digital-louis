@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { VerovioToolkit } from 'verovio/esm';
 import './App.css'
 import { insertTenues, removeTenues } from './utils/tenues/dom';
+import { addTenueInfo } from './utils/addTenueInfo';
 import { changeVisibilities } from './utils/changeVisibilities';
 import { modernizeClefs } from './utils/modernizeClefs';
 import { insertShadowSemibreves } from './utils/insertShadowSemibreves';
@@ -146,24 +147,6 @@ export const shiftStemTo = (path: Element, newX: number) => {
   const shift = +(path.getAttribute('data-shift-notehead') || 0)
 
   path.setAttribute('d', `M${newX - shift} ${y1} L${newX - shift} ${y2}`)
-}
-
-const addTenueInfo = (mei: Document) => {
-  const layerTypes = ['cantus', 'altus', 'tenor', 'quintus', 'sextus', 'bassus']
-  layerTypes.forEach(layerType => {
-    [...mei.querySelectorAll(`layer[type='${layerType}']`)]
-      .map(layer => [...layer.querySelectorAll('note,rest')])
-      .flat()
-      .filter(note => !note.getAttribute('type')?.split(' ').includes('ornam'))
-      .forEach((note, i, allNotes) => {
-        if (i === allNotes.length - 1) return
-
-        const nextName = allNotes[i + 1].getAttribute('xml:id')
-        if (!nextName) return
-
-        note.setAttribute('next', `#${nextName}`)
-      })
-  })
 }
 
 const connectNotesToFacsimile = () => {
