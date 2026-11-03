@@ -108,7 +108,7 @@
                            <note xml:id="n1ppqvv5" dur="2" oct="3" pname="a" stem.dir="up" precedes="#grace002" corresp="#path1397-0-0 #path23" />
                         </layer>
                         <layer type="bassus" n="6">
-                           <note type="entry" dur="2" oct="2" pname="a" stem.dir="down" precedes="#nisk93t" corresp="#path1397 #path1" />
+                           <note type="entry" xml:id="nujzde8" dur="2" oct="2" pname="a" stem.dir="down" precedes="#nisk93t" corresp="#path1397 #path1" />
                            <note xml:id="n1uuhtpf" dur="2" oct="2" pname="a" stem.dir="down" precedes="#n4qm0xj" corresp="#path1397-0-88 #path7" />
                            <note type="ornam" xml:id="grace000" grace="unknown" dur="4" oct="2" pname="a" stem.dir="down" precedes="#nvj7wdt" corresp="#path1397-0-82" />
                            <note xml:id="nvj7wdt" dur="2" oct="2" pname="g" stem.dir="down" accid="s" precedes="#n1efc6of" corresp="#path1397-0-85 #path18" />
@@ -181,7 +181,7 @@
                         </layer>
                      </staff>
                      <tie xml:id="tg6g9m2" startid="#nyaehxq" endid="#n1hgqcma" curvedir="above" />
-                     <tie xml:id="tg6g9m2" startid="#n19jb9wb" endid="#n1ijto1h" curvedir="above" />
+                     <tie xml:id="tgxd6nc" startid="#n19jb9wb" endid="#n1ijto1h" curvedir="above" />
                      <harm place="below" staff="2" tstamp="1">
                         <fb>
                            <f>4</f>
