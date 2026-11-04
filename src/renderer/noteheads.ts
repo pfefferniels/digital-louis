@@ -231,22 +231,32 @@ const reachRight = (placed: PlacedHead): number => {
     return Math.max(box.right, dots, flag) - x
 }
 
-/** How far a head reaches to the left of its place: its glyph, and its accidental. */
-const reachLeft = (placed: PlacedHead): number => {
-    const { head, x } = placed
-    const box = headBox(placed)
-    const accidental = isNoteHead(head) && head.note.accidental
-        ? glyphWidth(accidentalGlyphs[head.note.accidental], head.scale) + accidentalGap * head.scale
-        : 0
-    return x - box.left + accidental
+/** How far a head reaches to the left of its place: its glyph, and the accidental placed for it, if given. */
+const reachLeft = (placed: PlacedHead, accidental: Box | undefined): number =>
+    placed.x - Math.min(headBox(placed).left, accidental?.left ?? Infinity)
+
+interface Span {
+    readonly top: number
+    readonly bottom: number
 }
+
+/** The height a head takes up where it stands, and to its right: the head, and a stem rising from its right side. */
+const heightOf = (placed: PlacedHead): Span => {
+    const box = headBox(placed)
+    const { head } = placed
+    const stem = isNoteHead(head) && head.stem === 'up' ? positionY(head.position) - stemLength * head.scale : box.top
+    return { top: Math.min(box.top, stem), bottom: box.bottom }
+}
+
+/** Whether two heights come close enough for what stands in them to touch. */
+const meet = (a: Span, b: Span) => Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > -0.1
 
 /**
  * Between the measured layout and the source's, the heads of a chord part one
- * after another, and on their way they would run into each other. Where heads
- * of a staff less than a third apart would touch, the later gives way to the
- * right, `weight` of the way to keeping clear (1: wholly). Heads at one place
- * stay together, as one chord.
+ * after another, and on their way they would run into each other. Where a
+ * head, or its accidental, would touch a head before it on the staff (or the
+ * stem rising from it), it gives way to the right, `weight` of the way to
+ * keeping clear (1: wholly). Heads at one place stay together, as one chord.
  */
 export const keepApart = (placed: ReadonlyMap<ElementId, PlacedHead>, weight: number): Map<ElementId, PlacedHead> => {
     if (weight <= 0) return new Map(placed)
@@ -258,14 +268,25 @@ export const keepApart = (placed: ReadonlyMap<ElementId, PlacedHead>, weight: nu
         const moved: { readonly x: number, readonly by: number, readonly heads: readonly PlacedHead<NoteHead>[] }[] = []
         for (const group of places) {
             const x = group[0].x
+            // The accidentals of the place as the staff will set them: several perhaps in
+            // columns, and clear of those of heads just before, where these now stand.
+            const before = moved
+                .filter(earlier => x - (earlier.x + earlier.by) < 3)
+                .flatMap(earlier => earlier.heads.map(head => ({ ...head, x: head.x + earlier.by })))
+            const accidentals = new Map(placeAccidentals([...before, ...group])
+                .filter(placed => group.includes(placed.placed as PlacedHead<NoteHead>))
+                .map(placed => [placed.placed.head.id, accidentalBox(placed)]))
             let by = 0
             for (const before of moved) {
                 const natural = x - before.x
                 if (natural > 6) continue
                 for (const a of before.heads) for (const b of group) {
-                    if (Math.abs(a.head.position - b.head.position) > 2) continue
+                    const height = heightOf(a)
+                    const accidental = accidentals.get(b.head.id)
+                    const byAccidental = accidental !== undefined && meet(height, accidental)
+                    if (!byAccidental && !meet(height, headBox(b))) continue
                     // from where the earlier head now stands, which may have given way itself
-                    const reach = reachRight(a) + partingGap + reachLeft(b)
+                    const reach = reachRight(a) + partingGap + reachLeft(b, byAccidental ? accidental : undefined)
                     const near = Math.min(natural, reach)
                     by = Math.max(by, before.x + before.by + near + (reach - near) * weight - x)
                 }
