@@ -4,8 +4,8 @@
  * where a source is known, moving as far towards the source's layout as the
  * reading has come to be the source's (see `source.ts`).
  */
-import { adjacentPairs, inclusiveScan, isDefined, lerp } from './algorithms'
-import { Analysis, asUnmeasured } from './analysis'
+import { adjacentPairs, groupBy, inclusiveScan, isDefined, lerp } from './algorithms'
+import { Analysis, asUnmeasured, Head } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
 import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
@@ -14,7 +14,7 @@ import { engravingDefaults } from './leipzig'
 import type { Barline, ElementId } from './model'
 import { markSignature, systemSignature } from './signatures'
 import { SourceHeads, sourceStaffTop } from './source'
-import { keepApart } from './noteheads'
+import { keepApart, roomBefore } from './noteheads'
 import { engraveStaff } from './staff'
 
 export interface PageOptions {
@@ -47,10 +47,88 @@ const spacing = {
 
 const at = (slot: Slot, t: number): number => lerp(slot.measured, slot.reading, t)
 
+/** The room an ornament keeps before the note it leads into, as grace notes keep it on the beat */
+const leaderGap = 0.25
+
 const smoothstep = (from: number, to: number, x: number) => {
     const s = Math.min(1, Math.max(0, (x - from) / (to - from)))
     return s * s * (3 - 2 * s)
 }
+
+/** Grace notes - ornaments - with the chord they lead into: in one layer, sounding where it does. */
+interface Ornament {
+    /** the note of the chord the ornament keeps to, the first the source reads */
+    readonly target: ElementId
+    readonly chord: readonly Head[]
+    /** its grace notes, the nearest first */
+    readonly graces: readonly Head[]
+}
+
+const ornamentsOf = new WeakMap<Analysis, readonly Ornament[]>()
+
+/** Of the heads of a chord, the one the source reads first: where the source breaks it, the one an ornament leads into. */
+const firstRead = (chord: readonly Head[]): Head => {
+    const step = (head: Head) => (head.kind === 'note' ? head.step : undefined) ?? Infinity
+    return chord.reduce((first, head) => (step(head) < step(first) ? head : first))
+}
+
+const ornaments = (analysis: Analysis): readonly Ornament[] => {
+    const known = ornamentsOf.get(analysis)
+    if (known) return known
+    const runs = [...groupBy(analysis.heads, head => `${head.measure} ${head.layer.n} ${head.staff} ${head.onset}`).values()]
+        .flatMap(heads => {
+            const chord = heads.filter(head => head.graceRank === 0)
+            const graces = heads.filter(head => head.graceRank > 0).sort((a, b) => a.graceRank - b.graceRank)
+            return chord.length > 0 && graces.length > 0 ? [{ target: firstRead(chord).id, chord, graces }] : []
+        })
+    ornamentsOf.set(analysis, runs)
+    return runs
+}
+
+/** Where an ornament stands from the note it keeps to: as measured, and as close as it can. */
+interface Offsets {
+    readonly target: ElementId
+    readonly measured: number
+    readonly close: number
+}
+
+const offsetsIn = new WeakMap<SystemLayout, ReadonlyMap<ElementId, Offsets>>()
+
+/**
+ * The room the measured layout leaves an ornament before the note it leads
+ * into: all that leads into the place, on every layer, stands before all the
+ * place holds. Once off the beat, each ornament needs room before its own
+ * chord only, and comes up to it.
+ */
+const ornamentOffsets = (analysis: Analysis, layout: SystemLayout): ReadonlyMap<ElementId, Offsets> => {
+    const known = offsetsIn.get(layout)
+    if (known) return known
+    const offsets = new Map(ornaments(analysis).flatMap(({ target, chord, graces }) => {
+        const of = layout.slots.get(target)
+        const placed = (heads: readonly Head[]) => heads.flatMap(head => {
+            const slot = layout.slots.get(head.id)
+            return slot ? [{ head, x: slot.measured }] : []
+        })
+        const [nearest, notes] = [placed(graces.filter(grace => grace.graceRank === graces[0].graceRank)), placed(chord)]
+        if (!of || nearest.length === 0) return []
+        const closer = Math.max(0, roomBefore(nearest, notes, leaderGap))
+        return placed(graces).map(({ head, x }) => {
+            const measured = x - of.measured
+            return [head.id, { target, measured, close: measured + closer }] as const
+        })
+    }))
+    offsetsIn.set(layout, offsets)
+    return offsets
+}
+
+/**
+ * How far an ornament stands from the note it leads into at point `t` of the
+ * continuum: by Jamais d'aplomb (a third of the way) close up to it, and only
+ * then more and more where the source's reading has it.
+ */
+const ornamentOffset = (ornament: Offsets, slot: Slot, of: Slot, t: number): number => t < 1 / 3
+    ? lerp(ornament.measured, ornament.close, smoothstep(0, 1 / 3, t))
+    : lerp(ornament.close, slot.reading - of.reading, smoothstep(1 / 3, 1, t))
 
 /** What a staff takes up when it holds nothing but its lines. */
 const emptyStaff: Box = { left: 0, top: 0, right: 0, bottom: 4 }
@@ -83,11 +161,22 @@ const engraveParts = (
     const { score } = analysis
     // On their way between the layouts, heads keep clear of each other: wholly
     // from a third of the way on, and as they first part, more and more.
-    const placed = keepApart(new Map(analysis.heads.flatMap(head => {
+    // An ornament follows the note it leads into, wherever that gives way to.
+    const offsets = ornamentOffsets(analysis, layout)
+    const weight = smoothstep(0, 1 / 3, t)
+    const shown = (head: Head) => noteheads === 'unmeasured' ? asUnmeasured(head) : head
+    const notes = keepApart(new Map(analysis.heads.flatMap(head => {
         const slot = layout.slots.get(head.id)
-        const shown = noteheads === 'unmeasured' ? asUnmeasured(head) : head
-        return slot ? [[head.id, { head: shown, x: at(slot, t) }] as const] : []
-    })), smoothstep(0, 1 / 3, t))
+        return slot && !offsets.has(head.id) ? [[head.id, { head: shown(head), x: at(slot, t) }] as const] : []
+    })), weight)
+    const placed = keepApart(new Map([...notes, ...analysis.heads.flatMap(head => {
+        const ornament = offsets.get(head.id)
+        const [slot, of] = [layout.slots.get(head.id), ornament && layout.slots.get(ornament.target)]
+        const target = ornament && notes.get(ornament.target)
+        return ornament && slot && of && target
+            ? [[head.id, { head: shown(head), x: target.x + ornamentOffset(ornament, slot, of, t) }] as const]
+            : []
+    })]), weight)
     const barlines = layout.barlines.map(slot => at(slot, t))
     const staffIndices = score.staves.map((_, i) => i)
 
