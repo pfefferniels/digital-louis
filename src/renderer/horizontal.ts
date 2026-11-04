@@ -40,6 +40,12 @@ export interface SystemLayout {
 
 export interface HorizontalOptions {
     readonly systemWidth: number
+    /**
+     * Where on a system, of the given measures, the source writes them, if it
+     * writes them on one line: the reading of the source is spread over that
+     * stretch rather than over the whole system.
+     */
+    readonly readingSpan?: (measures: readonly number[]) => { readonly start: number, readonly end: number } | undefined
 }
 
 /** Piecewise linear between the knots, constant beyond them; at a repeated time the last knot holds. */
@@ -258,6 +264,24 @@ const positions = <K>(places: readonly Place[], xs: readonly number[], parts: (p
 const headParts = (place: Place) => place.heads.map(({ head, x }) => [head.id, x] as const)
 const markParts = (place: Place) => place.marks.map(({ mark, x }) => [mark, x] as const)
 
+/**
+ * The reading of the source, spread over the stretch of the system where the
+ * source writes it, if it fits there, or else over the whole system. The
+ * system still ends where it ends.
+ */
+const spreadReading = (
+    gaps: readonly Gap[], places: readonly Place[], start: number, options: HorizontalOptions,
+    span: { readonly start: number, readonly end: number } | undefined
+): number[] => {
+    const whole = () => spread(gaps, start, options.systemWidth - start)
+    if (!span) return whole()
+    const [from, to] = [Math.max(start, span.start), Math.min(options.systemWidth, span.end)]
+    if (to - from < minimumWidth(gaps)) return whole()
+    const xs = spread(gaps, from, to - from)
+    if (places[places.length - 1]?.barline) xs[xs.length - 1] = options.systemWidth
+    return xs
+}
+
 const layOutSystem = (
     analysis: Analysis,
     measures: readonly number[],
@@ -270,7 +294,7 @@ const layOutSystem = (
     const measured = places.flatMap(place => place.measured)
     const reading = places.flatMap(place => place.reading)
     const measuredXs = spread(gapsOf(analysis, measured), start, width)
-    const readingXs = spread(gapsOf(analysis, reading), start, width)
+    const readingXs = spreadReading(gapsOf(analysis, reading), reading, start, options, options.readingSpan?.(measures))
 
     const readingHeads = positions(reading, readingXs, headParts)
     const readingMarks = positions(reading, readingXs, markParts)

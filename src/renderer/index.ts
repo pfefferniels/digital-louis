@@ -18,15 +18,27 @@ import { analyse, Analysis } from './analysis'
 import { layOutHorizontally, SystemLayout } from './horizontal'
 import { readScore } from './mei'
 import { engravePage, Noteheads, PageOptions } from './page'
+import type { Point } from './geometry'
+import type { ElementId } from './model'
 import { drawInto } from './patch'
-import { svgTree, writeSvg } from './svg'
+import { contentStart } from './signatures'
+import { sourceMargins, sourceSpan } from './source'
+import { margin, svgTree, writeSvg } from './svg'
 
 export { UnsupportedMei } from './mei'
 export type { Noteheads } from './page'
 
 export interface RenderOptions {
-    /** the width of a system, in staff spaces */
-    readonly systemWidth?: number
+    /** the width of the page within its margins, in staff spaces */
+    readonly width?: number
+    /**
+     * Where a source writes the head of each note, by the note's id, as a
+     * fraction of the width of its page: from its left edge, and from its
+     * top. The page then takes the source's margins, and its staves move
+     * towards where the source writes their notes, as far as the reading has
+     * come to be the source's.
+     */
+    readonly source?: ReadonlyMap<string, Point>
 }
 
 export interface PreparedScore {
@@ -37,8 +49,18 @@ export interface PreparedScore {
 
 export const prepare = (document: Document, options: RenderOptions = {}): PreparedScore => {
     const analysis = analyse(readScore(document))
-    const page: PageOptions = { systemWidth: options.systemWidth ?? 110 }
-    return { analysis, systems: layOutHorizontally(analysis, page), options: page }
+    const width = options.width ?? 110
+    // the source's page is laid over this one, margins and all
+    const full = width + 2 * margin
+    const source = options.source && new Map([...options.source].map(([id, { x, y }]) => [id as ElementId, { x: x * full - margin, y: y * full - margin }]))
+    // the first head of a system, after the clefs and a little room
+    const start = (analysis.measureStates.length > 0 ? contentStart(analysis.measureStates[0]) : 0) + 1.4
+    const { left, right } = source ? sourceMargins(analysis.heads.map(head => head.id), source, width, start) : { left: 0, right: 0 }
+    const page: PageOptions = { width, left, systemWidth: width - left - right, source }
+    const readingSpan = source && ((measures: readonly number[]) => sourceSpan(
+        analysis.heads.filter(head => measures.includes(head.measure)), source, left
+    ))
+    return { analysis, systems: layOutHorizontally(analysis, { ...page, readingSpan }), options: page }
 }
 
 export interface DrawOptions {
