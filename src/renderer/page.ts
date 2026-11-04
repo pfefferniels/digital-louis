@@ -1,20 +1,29 @@
 /**
  * The page: each system engraved at one point of the continuum, its staves
- * stacked as closely as their content allows, the systems one below the other.
+ * stacked as closely as their content allows, the systems one below the other;
+ * where a source is known, moving as far towards the source's layout as the
+ * reading has come to be the source's (see `source.ts`).
  */
-import { adjacentPairs, exclusiveScan, inclusiveScan, isDefined, lerp } from './algorithms'
+import { adjacentPairs, inclusiveScan, isDefined, lerp } from './algorithms'
 import { Analysis, asUnmeasured } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
 import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
 import { interpolate, Slot, SystemLayout } from './horizontal'
 import { engravingDefaults } from './leipzig'
-import type { Barline } from './model'
+import type { Barline, ElementId } from './model'
 import { markSignature, systemSignature } from './signatures'
+import { SourceHeads, sourceStaffTop } from './source'
 import { engraveStaff } from './staff'
 
 export interface PageOptions {
+    /** the width of the page, within its margins */
+    readonly width: number
+    /** where the systems begin on the page */
+    readonly left: number
     readonly systemWidth: number
+    /** where a source writes the heads of the notes, on the page */
+    readonly source?: SourceHeads
 }
 
 /** How the heads are drawn: as notated, or as unmeasured notation writes them. */
@@ -52,11 +61,6 @@ const barlineLines = (x: number, style: Barline, top: number): Drawing[] => {
 /** What is drawn on a staff, its lines aside. */
 const obstaclesOn = (staff: Group): Box[] =>
     staff.children.filter(child => child.kind !== 'line').flatMap(primitiveBoxes)
-
-interface EngravedSystem {
-    readonly drawing: Group
-    readonly box: Box
-}
 
 /** A system engraved staff by staff, before the staves are stacked. */
 interface SystemParts {
@@ -150,55 +154,127 @@ const lerpBox = (a: Box, b: Box, t: number): Box => ({
     left: lerp(a.left, b.left, t), top: lerp(a.top, b.top, t), right: lerp(a.right, b.right, t), bottom: lerp(a.bottom, b.bottom, t),
 })
 
+/** The centre of the head of each note in a drawing, by the note's id. */
+const headCentres = (drawing: Drawing, into = new Map<ElementId, { x: number, y: number }>()) => {
+    if (drawing.kind !== 'group') return into
+    const head = drawing.classes.includes('note') && drawing.id !== undefined
+        ? drawing.children.find(child => child.kind === 'group' && child.classes.includes('notehead'))
+        : undefined
+    const box = head && boundsOf(head)
+    if (box && drawing.id !== undefined) into.set(drawing.id as ElementId, { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 })
+    drawing.children.forEach(child => headCentres(child, into))
+    return into
+}
+
 /**
  * A system with its heads drawn as `noteheads` says, and its staves spaced
  * `unmeasuredSpacing` of the way from as notated heads ask (0) to as
  * unmeasured ones let them (1), which are without stems and take less room:
  * the way the view closes up as it comes to the unmeasured notation.
  */
+interface EngravedSystem {
+    /** as drawn */
+    readonly parts: SystemParts
+    /** while the staves are spaced between the two kinds of heads: the system with either, and how far between */
+    readonly between?: { readonly notated: SystemParts, readonly unmeasured: SystemParts, readonly spacing: number }
+    /** the top line of each staff, the first at 0 */
+    readonly tops: readonly number[]
+    /** the height of each head on its staff, from its top line, by staff */
+    readonly heads: readonly ReadonlyMap<ElementId, number>[]
+}
+
 const engraveSystem = (
     analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions,
     noteheads: Noteheads, unmeasuredSpacing: number
 ): EngravedSystem => {
     const parts = engraveParts(analysis, layout, t, options, noteheads)
-    if (unmeasuredSpacing === (noteheads === 'unmeasured' ? 1 : 0)) {
-        const drawing = assemble(analysis, parts, stack(parts.extents))
-        return { drawing, box: boundsOf(drawing) ?? emptyStaff }
-    }
+    const heads = parts.extents.map((_, staff) => new Map([...parts.measures.flatMap(({ staves }) => [...headCentres(staves[staff])])]
+        .map(([id, { y }]) => [id, y])))
+    if (unmeasuredSpacing === (noteheads === 'unmeasured' ? 1 : 0)) return { parts, tops: stack(parts.extents), heads }
     const other = engraveParts(analysis, layout, t, options, noteheads === 'unmeasured' ? 'notated' : 'unmeasured')
     const [notated, unmeasured] = noteheads === 'unmeasured' ? [other, parts] : [parts, other]
     const [notatedTops, unmeasuredTops] = [stack(notated.extents), stack(unmeasured.extents)]
-    const tops = notatedTops.map((top, i) => lerp(top, unmeasuredTops[i], unmeasuredSpacing))
-    // The system takes up room between what either kind of heads would, so that what follows moves on smoothly.
-    const boxOf = (system: SystemParts) => boundsOf(assemble(analysis, system, tops)) ?? emptyStaff
     return {
-        drawing: assemble(analysis, parts, tops),
-        box: lerpBox(boxOf(notated), boxOf(unmeasured), unmeasuredSpacing),
+        parts,
+        between: { notated, unmeasured, spacing: unmeasuredSpacing },
+        tops: notatedTops.map((top, i) => lerp(top, unmeasuredTops[i], unmeasuredSpacing)),
+        heads,
     }
+}
+
+/** The room a system takes up with its staves at `tops`: what each staff takes up, where it stands. */
+const roomOf = (parts: SystemParts, tops: readonly number[]): Box =>
+    parts.extents.map((extent, k) => ({ ...extent, top: extent.top + tops[k], bottom: extent.bottom + tops[k] })).reduce(union)
+
+/**
+ * The room a system takes up with its staves at `tops`: between what either
+ * kind of heads would take, while it is spaced between them, so that what
+ * follows moves on smoothly.
+ */
+const boxOf = (system: EngravedSystem, tops: readonly number[]): Box => {
+    const { between } = system
+    return between
+        ? lerpBox(roomOf(between.notated, tops), roomOf(between.unmeasured, tops), between.spacing)
+        : roomOf(system.parts, tops)
+}
+
+/** What is above a system: where its content ends, and the top line of its last staff. */
+interface Above {
+    readonly bottom: number
+    readonly lastStaff: number | undefined
+}
+
+/**
+ * Where the staves of a system stand on the page: as closely below what is
+ * above as their content allows, or `towardsSource` of the way to where the
+ * source writes their notes, though never closer to each other than their
+ * content allows. Following the source, a system keeps clear only of the
+ * staves above, not of all they hold: the source's lines too stand closer
+ * than what is written about them.
+ */
+const placeStaves = (
+    analysis: Analysis, system: EngravedSystem, above: Above, source: SourceHeads | undefined, towardsSource: number
+) => {
+    const natural = system.tops
+    const first = above.bottom + spacing.systems - boxOf(system, natural).top
+    const targets = source && towardsSource > 0 ? system.heads.map(heads => sourceStaffTop(heads, source)) : []
+    const known = targets.findIndex(isDefined)
+    if (known < 0) return { drawing: assemble(analysis, system.parts, natural), box: boxOf(system, natural), top: first, tops: natural }
+
+    // a staff the source tells nothing of keeps its distance to one it does
+    const wanted = natural.map((top, k) => {
+        const target = targets[k] ?? (targets[known] as number) - natural[known] + top
+        return lerp(first + top, target, towardsSource)
+    })
+    for (let k = 1; k < wanted.length; k++) wanted[k] = Math.max(wanted[k], wanted[k - 1] + natural[k] - natural[k - 1])
+    const tops = wanted.map(top => top - wanted[0])
+    const box = boxOf(system, tops)
+    const clear = above.lastStaff === undefined
+        ? above.bottom + spacing.systems - box.top
+        : lerp(above.bottom + spacing.systems - box.top, above.lastStaff + spacing.staves, towardsSource)
+    return { drawing: assemble(analysis, system.parts, tops), box, top: Math.max(wanted[0], clear), tops }
 }
 
 export const engravePage = (
     analysis: Analysis, layouts: readonly SystemLayout[], t: number, options: PageOptions, noteheads: Noteheads,
-    unmeasuredSpacing = noteheads === 'unmeasured' ? 1 : 0
+    unmeasuredSpacing = noteheads === 'unmeasured' ? 1 : 0,
+    towardsSource = t
 ): Page => {
     const { title } = analysis.score
     const heading = title === undefined ? [] : [
-        group(['pgHead'], [text({ x: options.systemWidth / 2, y: spacing.title }, title, spacing.title, 'middle')]),
+        group(['pgHead'], [text({ x: options.width / 2, y: spacing.title }, title, spacing.title, 'middle')]),
     ]
-    const systems = layouts.map(layout => engraveSystem(analysis, layout, t, options, noteheads, unmeasuredSpacing))
-    const heightOf = (box: Box) => box.bottom - box.top
-    const tops = exclusiveScan(
-        systems,
-        (top, system) => top + heightOf(system.box) + spacing.systems,
-        (title === undefined ? 0 : 1.5 * spacing.title) + spacing.systems
-    )
-    const last = systems.length - 1
+    const systems: Drawing[] = []
+    let above: Above = { bottom: title === undefined ? 0 : 1.5 * spacing.title, lastStaff: undefined }
+    for (const layout of layouts) {
+        const system = engraveSystem(analysis, layout, t, options, noteheads, unmeasuredSpacing)
+        const { drawing, box, top, tops } = placeStaves(analysis, system, above, options.source, towardsSource)
+        systems.push(translate(drawing, options.left, top))
+        above = { bottom: Math.max(above.bottom, top + box.bottom), lastStaff: top + tops[tops.length - 1] }
+    }
     return {
-        width: options.systemWidth,
-        height: last < 0 ? 0 : tops[last] + heightOf(systems[last].box),
-        content: group(['page-margin'], [
-            ...heading,
-            ...systems.map((system, i) => translate(system.drawing, 0, tops[i] - system.box.top)),
-        ]),
+        width: options.width,
+        height: Math.max(0, above.bottom),
+        content: group(['page-margin'], [...heading, ...systems]),
     }
 }

@@ -9,7 +9,7 @@ import { modernizeClefs } from './utils/modernizeClefs';
 import { cloneDocument, insertBeamedOrnaments, removeTiedNotes } from './utils/meiTransforms';
 import { GlowDefs } from './GlowDefs';
 import { highlightOnHover, highlightOnTap } from './utils/highlightCounterparts';
-import { atRest, morph, unmorph } from './utils/sourceMorph';
+import { atRest, headsInSource, morph, unmorph } from './utils/sourceMorph';
 import { crossfade, Snapshot, snapshot } from './utils/crossfade';
 
 export const continuumLength = 300
@@ -78,6 +78,8 @@ interface ViewOptions {
   readonly modernClefs: boolean
   /** the semi-measured view beams the ornaments and leaves out the notes tied over */
   readonly semiMeasured: boolean
+  /** where the source writes the notes, for the page to be laid out like it */
+  readonly source?: ReadonlyMap<string, { readonly x: number, readonly y: number }>
 }
 
 type Prepared = { readonly score: PreparedScore } | { readonly error: string }
@@ -92,7 +94,7 @@ const prepareView = (meiDoc: Document, options: ViewOptions): Prepared => {
     removeTiedNotes(doc)
   }
   try {
-    return { score: prepare(doc) }
+    return { score: prepare(doc, { source: options.source }) }
   }
   catch (error) {
     return { error: error instanceof Error ? error.message : String(error) }
@@ -149,9 +151,24 @@ const Work = ({ id }: WorkProps) => {
     loadEncoding()
   }, [id])
 
+  // Where the facsimile writes the notes linked to it, once it is there.
+  const [sourceHeads, setSourceHeads] = useState<ReturnType<typeof headsInSource>>()
+  useEffect(() => {
+    if (!meiDoc || !source) return
+    const links = Array.from(meiDoc.querySelectorAll('note[corresp]'))
+      .map(note => [note.getAttribute('xml:id') ?? '', note.getAttribute('corresp') ?? ''] as const)
+    setSourceHeads(headsInSource(source, links))
+  }, [meiDoc, source])
+
   // Both readings are prepared at once, for the view to pass from one to the other without delay.
-  const regular = useMemo(() => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: false }), [meiDoc, modernClefs])
-  const semi = useMemo(() => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: true }), [meiDoc, modernClefs])
+  const regular = useMemo(
+    () => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: false, source: sourceHeads }),
+    [meiDoc, modernClefs, sourceHeads]
+  )
+  const semi = useMemo(
+    () => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: true, source: sourceHeads }),
+    [meiDoc, modernClefs, sourceHeads]
+  )
 
   // What the view shows, at `shown`: the semi-measured reading only where the slider rests on it;
   // after it, the staves closing up for the unmeasured noteheads, which are written from the end of

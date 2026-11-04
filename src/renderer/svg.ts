@@ -17,7 +17,7 @@ import type { Page } from './page'
 const unit = 100
 
 /** The margin around the page, in staff spaces. */
-const margin = 2
+export const margin = 2
 
 export interface SvgElement {
     readonly name: string

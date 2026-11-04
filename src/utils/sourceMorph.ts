@@ -82,17 +82,49 @@ const between = (from: SVGGraphicsElement, to: SVGGraphicsElement): DOMMatrix | 
 }
 
 /**
- * The trace of the head among the traces a note is linked to, where the page
- * draws it: the smallest, as the others are the strokes of tenues.
+ * The trace of the head among the traces a note is linked to (@corresp, as
+ * `#id #id ...`) in the facsimile `scan`, in the user coordinates of `frame`:
+ * the smallest, as the others are the strokes of tenues.
  */
-const headTrace = (note: Element, scan: SVGSVGElement, page: SVGGElement): Rect | undefined =>
-    (note.getAttribute('data-corresp') ?? '')
+const headTrace = (corresp: string, scan: SVGSVGElement, frame: SVGGraphicsElement): Rect | undefined =>
+    corresp
         .split(' ')
-        .map(ref => document.getElementById(ref.replace(/^#/, '')))
-        .filter((trace): trace is HTMLElement => trace !== null && scan.contains(trace))
-        .map(trace => boxIn(page, trace))
+        .map(ref => scan.querySelector(`[id="${CSS.escape(ref.replace(/^#/, ''))}"]`))
+        .filter((trace): trace is Element => trace !== null)
+        .map(trace => boxIn(frame, trace))
         .filter((box): box is Rect => box !== undefined)
         .sort((a, b) => a.width * a.height - b.width * b.height)[0]
+
+/**
+ * Where the facsimile writes the head of each note linked to it, by the
+ * note's id, as a fraction of the width of its page: from its left edge, and
+ * from its top - for the page of the score to be laid out like it. The
+ * facsimile is measured in the document, where it stays for a moment.
+ */
+export const headsInSource = (source: SVGSVGElement, links: Iterable<readonly [string, string]>): Map<string, Center> => {
+    const host = document.createElement('div')
+    host.style.cssText = 'position: absolute; left: -100000px; top: 0; visibility: hidden'
+    const svg = document.importNode(source, true)
+    svg.removeAttribute('viewBox')
+    host.appendChild(svg)
+    document.body.appendChild(host)
+    try {
+        const frame = svg.getBBox()
+        const heads = new Map<string, Center>()
+        if (frame.width === 0) return heads
+        for (const [id, corresp] of links) {
+            const head = headTrace(corresp, svg, svg)
+            if (head) {
+                const { x, y } = center(head)
+                heads.set(id, { x: (x - frame.x) / frame.width, y: (y - frame.y) / frame.width })
+            }
+        }
+        return heads
+    }
+    finally {
+        host.remove()
+    }
+}
 
 /**
  * Lays the facsimile into the page, beneath all that is engraved, at the width
@@ -135,7 +167,7 @@ const prepare = (svg: SVGSVGElement, source: SVGSVGElement): Morph | undefined =
     const linked = Array.from(svg.querySelectorAll<SVGGElement>('.note[data-corresp]')).flatMap(note => {
         const head = note.querySelector('.notehead use')
         const engravedHead = head && boxIn(page, head)
-        const writtenHead = headTrace(note, scan, page)
+        const writtenHead = headTrace(note.getAttribute('data-corresp') ?? '', scan, page)
         if (!engravedHead || !writtenHead) return []
         return [{
             note,
