@@ -220,7 +220,7 @@ export const footprint = (heads: readonly PlacedHead[]): Extent | undefined => {
 // Heads on their way between the layouts
 
 /** The room two heads keep between them, beyond what they take up */
-const partingGap = 0.15
+export const partingGap = 0.15
 
 /** How far a head reaches to the right of its place: its glyph, and its dots and flag. */
 const reachRight = (placed: PlacedHead): number => {
@@ -276,9 +276,14 @@ export const roomBefore = (before: readonly PlacedHead[], after: readonly Placed
  * after another, and on their way they would run into each other. Where a
  * head, or its accidental, would touch a head before it on the staff (or the
  * stem rising from it), it gives way to the right, `weight` of the way to
- * keeping clear (1: wholly). Heads at one place stay together, as one chord.
+ * keeping clear (1: wholly), `gap` beyond touching. Heads at one place stay
+ * together, as one chord.
  */
-export const keepApart = (placed: ReadonlyMap<ElementId, PlacedHead>, weight: number): Map<ElementId, PlacedHead> => {
+export const keepApart = (
+    placed: ReadonlyMap<ElementId, PlacedHead>,
+    weight: number,
+    gap: (a: Head, b: Head) => number = () => partingGap
+): Map<ElementId, PlacedHead> => {
     if (weight <= 0) return new Map(placed)
     const apart = new Map(placed)
     const notes = [...placed.values()].filter(isPlacedNote)
@@ -306,7 +311,7 @@ export const keepApart = (placed: ReadonlyMap<ElementId, PlacedHead>, weight: nu
                     const byAccidental = accidental !== undefined && meet(height, accidental)
                     if (!byAccidental && !meet(height, headBox(b))) continue
                     // from where the earlier head now stands, which may have given way itself
-                    const reach = reachRight(a) + partingGap + reachLeft(b, byAccidental ? accidental : undefined)
+                    const reach = reachRight(a) + gap(a.head, b.head) + reachLeft(b, byAccidental ? accidental : undefined)
                     const near = Math.min(natural, reach)
                     by = Math.max(by, before.x + before.by + near + (reach - near) * weight - x)
                 }
