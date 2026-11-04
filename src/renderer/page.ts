@@ -14,6 +14,7 @@ import { engravingDefaults } from './leipzig'
 import type { Barline, ElementId } from './model'
 import { markSignature, systemSignature } from './signatures'
 import { SourceHeads, sourceStaffTop } from './source'
+import { keepApart } from './noteheads'
 import { engraveStaff } from './staff'
 
 export interface PageOptions {
@@ -46,6 +47,11 @@ const spacing = {
 
 const at = (slot: Slot, t: number): number => lerp(slot.measured, slot.reading, t)
 
+const smoothstep = (from: number, to: number, x: number) => {
+    const s = Math.min(1, Math.max(0, (x - from) / (to - from)))
+    return s * s * (3 - 2 * s)
+}
+
 /** What a staff takes up when it holds nothing but its lines. */
 const emptyStaff: Box = { left: 0, top: 0, right: 0, bottom: 4 }
 
@@ -75,11 +81,13 @@ const engraveParts = (
     analysis: Analysis, layout: SystemLayout, t: number, options: PageOptions, noteheads: Noteheads
 ): SystemParts => {
     const { score } = analysis
-    const placed = new Map(analysis.heads.flatMap(head => {
+    // On their way between the layouts, heads keep clear of each other: wholly
+    // from a third of the way on, and as they first part, more and more.
+    const placed = keepApart(new Map(analysis.heads.flatMap(head => {
         const slot = layout.slots.get(head.id)
         const shown = noteheads === 'unmeasured' ? asUnmeasured(head) : head
         return slot ? [[head.id, { head: shown, x: at(slot, t) }] as const] : []
-    }))
+    })), smoothstep(0, 1 / 3, t))
     const barlines = layout.barlines.map(slot => at(slot, t))
     const staffIndices = score.staves.map((_, i) => i)
 
