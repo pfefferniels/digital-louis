@@ -5,13 +5,15 @@
  * the engraving around the notes fades, the facsimile appears beneath, and at
  * last the engraved heads dissolve into the handwritten ones.
  *
+ * The facsimile is laid into the page as its last layer, at the width of the
+ * page: the scans of the manuscript with the traces of its notes, which keep
+ * their ids, for the notes to be linked to them (see `highlightCounterparts`).
+ *
  * The score is engraved once, at the unmeasured end of the continuum, and only
  * moved and faded from there, so that every frame is cheap: `morph` is meant
  * to be called for each frame with the progress from 0 (the engraving) to
  * 1 (the manuscript).
  */
-
-const SVG_NS = 'http://www.w3.org/2000/svg'
 
 interface Rect {
     readonly x: number
@@ -79,65 +81,68 @@ const between = (from: SVGGraphicsElement, to: SVGGraphicsElement): DOMMatrix | 
     return a && b ? DOMMatrix.fromMatrix(b).inverse().multiply(DOMMatrix.fromMatrix(a)) : undefined
 }
 
-const asTransform = ({ a, b, c, d, e, f }: DOMMatrix) => `matrix(${a} ${b} ${c} ${d} ${e} ${f})`
-
 /**
- * The trace of the head among the traces a note is linked to: the smallest,
- * as the others are the strokes of tenues.
+ * The trace of the head among the traces a note is linked to, where the page
+ * draws it: the smallest, as the others are the strokes of tenues.
  */
-const headTrace = (note: Element, facsimile: SVGSVGElement): Rect | undefined =>
+const headTrace = (note: Element, scan: SVGSVGElement, page: SVGGElement): Rect | undefined =>
     (note.getAttribute('data-corresp') ?? '')
         .split(' ')
         .map(ref => document.getElementById(ref.replace(/^#/, '')))
-        .filter((trace): trace is HTMLElement => trace !== null && facsimile.contains(trace))
-        .map(trace => boxIn(facsimile, trace))
+        .filter((trace): trace is HTMLElement => trace !== null && scan.contains(trace))
+        .map(trace => boxIn(page, trace))
         .filter((box): box is Rect => box !== undefined)
         .sort((a, b) => a.width * a.height - b.width * b.height)[0]
 
-/** The pages of the facsimile without its traces, for beneath the score. */
-const scanOf = (facsimile: SVGSVGElement, frame: Rect): SVGSVGElement => {
-    const scan = document.createElementNS(SVG_NS, 'svg')
+/**
+ * Lays the facsimile into the page, beneath all that is engraved, at the width
+ * of the page: what it draws, from the scans of its pages to its traces, sets
+ * its frame, whatever size or view box Inkscape gave it. Returns it with the
+ * height it takes.
+ */
+const layIn = (source: SVGSVGElement, page: SVGGElement, corner: DOMPoint, width: number) => {
+    const scan = document.importNode(source, true)
     scan.setAttribute('class', 'source-scan')
-    scan.setAttribute('viewBox', `${frame.x} ${frame.y} ${frame.width} ${frame.height}`)
-    for (const image of Array.from(facsimile.querySelectorAll('image'))) {
-        const place = between(image, facsimile)
-        if (!place) continue
-        const copy = image.cloneNode(false) as SVGImageElement
-        copy.removeAttribute('id')
-        const positioned = document.createElementNS(SVG_NS, 'g')
-        positioned.setAttribute('transform', asTransform(place))
-        positioned.appendChild(copy)
-        scan.appendChild(positioned)
+    scan.removeAttribute('viewBox')
+    scan.setAttribute('x', String(corner.x))
+    scan.setAttribute('y', String(corner.y))
+    scan.setAttribute('width', String(width))
+    scan.removeAttribute('height')
+    page.insertBefore(scan, page.firstChild)
+
+    const frame = scan.getBBox()
+    if (frame.width === 0 || frame.height === 0) {
+        scan.remove()
+        return
     }
-    return scan
+    const height = (width * frame.height) / frame.width
+    scan.setAttribute('viewBox', `${frame.x} ${frame.y} ${frame.width} ${frame.height}`)
+    scan.setAttribute('height', String(height))
+    return { scan, height }
 }
 
-const prepare = (svg: SVGSVGElement, facsimile: SVGSVGElement): Morph | undefined => {
+const prepare = (svg: SVGSVGElement, source: SVGSVGElement): Morph | undefined => {
     const page = svg.querySelector<SVGGElement>('.page-margin')
-    const frame = facsimile.viewBox.baseVal
     const engraved = svg.viewBox.baseVal
     const pageFromRoot = page && between(svg, page)
-    if (!page || !pageFromRoot || !frame || frame.width === 0 || !engraved || engraved.width === 0) return
+    if (!page || !pageFromRoot || !engraved || engraved.width === 0) return
 
-    // The facsimile is laid over the page at the width of the page.
-    const k = engraved.width / frame.width
-    const fromSource = ({ x, y }: Center): Center => {
-        const p = new DOMPoint((x - frame.x) * k, (y - frame.y) * k).matrixTransform(pageFromRoot)
-        return { x: p.x, y: p.y }
-    }
+    const laid = layIn(source, page, new DOMPoint(engraved.x, engraved.y).matrixTransform(pageFromRoot), engraved.width)
+    if (!laid) return
+    const { scan } = laid
 
     const systems = Array.from(svg.querySelectorAll('.system'))
     const linked = Array.from(svg.querySelectorAll<SVGGElement>('.note[data-corresp]')).flatMap(note => {
         const head = note.querySelector('.notehead use')
         const engravedHead = head && boxIn(page, head)
-        const writtenHead = headTrace(note, facsimile)
+        const writtenHead = headTrace(note, scan, page)
         if (!engravedHead || !writtenHead) return []
         return [{
             note,
             from: center(engravedHead),
-            to: fromSource(center(writtenHead)),
+            to: center(writtenHead),
             scale: Math.min(4, Math.max(0.25, Math.sqrt(
-                (writtenHead.width * writtenHead.height * k * k) / (engravedHead.width * engravedHead.height)
+                (writtenHead.width * writtenHead.height) / (engravedHead.width * engravedHead.height)
             ))),
             system: systems.indexOf(note.closest('.system') as Element),
         }]
@@ -150,19 +155,11 @@ const prepare = (svg: SVGSVGElement, facsimile: SVGSVGElement): Morph | undefine
         return { note, from, to, scale, start: order.length > 1 ? (stagger * i) / (order.length - 1) : 0 }
     })
 
-    const scan = scanOf(facsimile, frame)
-    const corner = new DOMPoint(engraved.x, engraved.y).matrixTransform(pageFromRoot)
-    scan.setAttribute('x', String(corner.x))
-    scan.setAttribute('y', String(corner.y))
-    scan.setAttribute('width', String(engraved.width))
-    scan.setAttribute('height', String(frame.height * k))
-    page.insertBefore(scan, page.firstChild)
-
     return {
         flights,
         scan,
         engravedHeight: engraved.height,
-        sourceHeight: frame.height * k,
+        sourceHeight: laid.height,
         viewBox: svg.getAttribute('viewBox'),
     }
 }
@@ -190,15 +187,15 @@ export const unmorph = (svg: SVGSVGElement) => {
 
 /**
  * Draws the score `progress` of the way from its engraving (0) into the source (1),
- * the facsimile given as the SVG the viewer shows, fitted to what it draws.
+ * given as the SVG of its facsimile, which need not be part of the page.
  */
-export const morph = (svg: SVGSVGElement, facsimile: SVGSVGElement, progress: number) => {
+export const morph = (svg: SVGSVGElement, source: SVGSVGElement, progress: number) => {
     const current = morphs.get(svg)
     if (progress <= 0) {
         unmorph(svg)
         return
     }
-    const state = current ?? prepare(svg, facsimile)
+    const state = current ?? prepare(svg, source)
     if (!state) return
     morphs.set(svg, state)
 

@@ -1,7 +1,6 @@
-/* score and facsimile take the width of their panel, and as much height as that asks */
+/* the score takes the width of its panel, and as much height as that asks */
 #score svg,
-.score-ghost svg,
-.facsimile svg {
+.score-ghost svg {
   display: block;
   width: 100%;
   height: auto;
@@ -68,33 +67,41 @@
   animation: none;
 }
 
-/* the note tapped on a touch screen, or the notes of the trace tapped in the facsimile */
+/* the note tapped on a touch screen */
 .notehead.selected {
   fill: darkred;
   filter: url(#score-glow);
 }
 
-
 /*
  * Travelling into the source: the engraving fades (--engraving), while the
- * heads of the notes linked to the facsimile travel, and dissolve at last (--heads).
- * What the view hides (opacity="0") stays hidden.
+ * heads of the notes linked to the facsimile travel, and dissolve at last
+ * (--heads) into the manuscript laid in beneath (.source-scan), which keeps
+ * its own look. What the view hides (opacity="0") stays hidden.
  */
-#score svg[data-morph] :is(path, use, polygon, ellipse, text):not([opacity="0"]) {
+#score svg[data-morph] :is(.system, .pgHead) :is(path, use, polygon, ellipse, text):not([opacity="0"]),
+#score svg[data-morph] .tenue {
   opacity: var(--engraving);
 }
 
-#score svg[data-morph] .linked > .notehead use {
+#score svg[data-morph] .system .linked > .notehead use {
   opacity: var(--heads);
 }
 
-/* in the manuscript, the note hovered over or tapped shows the editors' reading of it */
-#score svg[data-morph] .linked > .notehead.selected use {
+/*
+ * In the manuscript, the note tapped, or hovered over itself or by its traces,
+ * shows how the edition reads it, in red.
+ */
+#score svg[data-morph] .system .linked > .notehead:is(.selected, .with-glow) use {
   opacity: 1;
 }
 
+#score svg[data-morph] .notehead.with-glow {
+  fill: darkred;
+}
+
 @media (hover: hover) {
-  #score svg[data-morph] .linked > .notehead:hover use {
+  #score svg[data-morph] .system .linked > .notehead:hover use {
     opacity: 1;
   }
 }
