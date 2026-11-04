@@ -252,6 +252,26 @@ const heightOf = (placed: PlacedHead): Span => {
 const meet = (a: Span, b: Span) => Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > -0.1
 
 /**
+ * How far the heads `before` could move to the right and still stand `gap`
+ * clear of the heads `after` (and their accidentals): where they would meet in
+ * height, clear of all that is drawn of them; where not, the one head still
+ * before the other.
+ */
+export const roomBefore = (before: readonly PlacedHead[], after: readonly PlacedHead[], gap: number): number => {
+    const accidentals = new Map(placeAccidentals(after).map(placed => [placed.placed.head.id, accidentalBox(placed)]))
+    let room = Infinity
+    for (const a of before) for (const b of after) {
+        const height = heightOf(a)
+        const box = headBox(b)
+        const right = meet(height, box) ? a.x + reachRight(a) : headBox(a).right
+        room = Math.min(room, box.left - gap - right)
+        const accidental = accidentals.get(b.head.id)
+        if (accidental && meet(height, accidental)) room = Math.min(room, accidental.left - gap - a.x - reachRight(a))
+    }
+    return room
+}
+
+/**
  * Between the measured layout and the source's, the heads of a chord part one
  * after another, and on their way they would run into each other. Where a
  * head, or its accidental, would touch a head before it on the staff (or the
