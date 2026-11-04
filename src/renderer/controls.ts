@@ -23,8 +23,10 @@ export interface StaffDrawing {
 
 export interface ControlScene {
     readonly analysis: Analysis
-    /** the measures of the system */
+    /** the measures of the system, whole or in part */
     readonly measures: readonly number[]
+    /** the stretch of notated time the system holds, in whole notes from the start of the score */
+    readonly span: { readonly start: number, readonly end: number }
     /** the heads of the system at their places */
     readonly placed: ReadonlyMap<ElementId, PlacedHead>
     /** what is drawn on each staff, for ornaments to keep clear of */
@@ -42,13 +44,6 @@ const timeOf = (analysis: Analysis, measure: number, at: Timestamp): number => {
     return analysis.measureStarts[target].toNumber() + (at.beat - 1) / analysis.score.meter.unit
 }
 
-const systemSpan = ({ analysis, measures }: ControlScene) => {
-    const last = measures[measures.length - 1]
-    return {
-        start: analysis.measureStarts[measures[0]].toNumber(),
-        end: analysis.measureStarts[last].plus(analysis.measureLengths[last]).toNumber(),
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Ties
@@ -205,7 +200,7 @@ const drawDirection = (scene: ControlScene, measure: number, direction: Directio
 
 /** A bracket reaching across a system break is drawn in each system it reaches, hooked where it begins and ends. */
 const drawBracket = (scene: ControlScene, measure: number, bracket: Bracket): StaffDrawing[] => {
-    const span = systemSpan(scene)
+    const { span } = scene
     const from = timeOf(scene.analysis, measure, bracket.from)
     const to = timeOf(scene.analysis, measure, bracket.to)
     if (to < span.start || from >= span.end) return []
@@ -237,14 +232,19 @@ const drawBracket = (scene: ControlScene, measure: number, bracket: Bracket): St
  */
 export const engraveControls = (scene: ControlScene): StaffDrawing[] => {
     const inSystem = new Set(scene.measures)
+    // a measure the source breaks within is on two systems: what stands at a time stamp goes to the one holding that time
+    const atTime = (measure: number, at: Timestamp) => {
+        const time = timeOf(scene.analysis, measure, at)
+        return inSystem.has(measure) && time >= scene.span.start - 1e-9 && time < scene.span.end - 1e-9
+    }
     return scene.analysis.score.measures.flatMap((measure, index) => measure.controls.flatMap(
         (control: ControlEvent): StaffDrawing[] => {
             switch (control.kind) {
                 case 'tie': return drawTie(scene, control)
                 case 'bracket': return drawBracket(scene, index, control)
                 case 'ornament': return inSystem.has(index) ? drawOrnament(scene, index, control) : []
-                case 'figuredBass': return inSystem.has(index) ? drawFiguredBass(scene, index, control) : []
-                case 'direction': return inSystem.has(index) ? drawDirection(scene, index, control) : []
+                case 'figuredBass': return atTime(index, control.at) ? drawFiguredBass(scene, index, control) : []
+                case 'direction': return atTime(index, control.at) ? drawDirection(scene, index, control) : []
             }
         }
     ))

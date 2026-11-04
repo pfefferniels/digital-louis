@@ -57,9 +57,7 @@ export const prepare = (document: Document, options: RenderOptions = {}): Prepar
     const start = (analysis.measureStates.length > 0 ? contentStart(analysis.measureStates[0]) : 0) + 1.4
     const { left, right } = source ? sourceMargins(analysis.heads.map(head => head.id), source, width, start) : { left: 0, right: 0 }
     const page: PageOptions = { width, left, systemWidth: width - left - right, source }
-    const readingSpan = source && ((measures: readonly number[]) => sourceSpan(
-        analysis.heads.filter(head => measures.includes(head.measure)), source, left
-    ))
+    const readingSpan = source && ((heads: readonly { readonly id: ElementId, readonly staff: number }[]) => sourceSpan(heads, source, left))
     return { analysis, systems: layOutHorizontally(analysis, { ...page, readingSpan }), options: page }
 }
 
