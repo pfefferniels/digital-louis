@@ -64,7 +64,9 @@ export const clusterOffsets = (heads: readonly Head[]): ReadonlyMap<ElementId, n
     const chords = groupBy(notes.filter(note => note.chord !== undefined), note => note.chord)
     const inChords = new Map([...chords.values()].flatMap(chordOffsets))
     return new Map(heads.map(head => {
-        const aside = isNoteHead(head) && notes.some(other => stepsAside(head, other)) ? headWidth(head) : 0
+        // clear of the head it steps aside from, which may be the wider
+        const from = isNoteHead(head) ? notes.filter(other => stepsAside(head, other)) : []
+        const aside = from.length > 0 ? Math.max(headWidth(head), ...from.map(headWidth)) : 0
         return [head.id, (inChords.get(head.id) ?? 0) + aside]
     }))
 }
@@ -212,4 +214,65 @@ export const footprint = (heads: readonly PlacedHead[]): Extent | undefined => {
         ...heads.map(flagBox).filter(isDefined),
     ])
     return box && { left: box.left, right: box.right }
+}
+
+// ---------------------------------------------------------------------------
+// Heads on their way between the layouts
+
+/** The room two heads keep between them, beyond what they take up */
+const partingGap = 0.15
+
+/** How far a head reaches to the right of its place: its glyph, and its dots and flag. */
+const reachRight = (placed: PlacedHead): number => {
+    const { head, x } = placed
+    const box = headBox(placed)
+    const dots = isNoteHead(head) && head.dots > 0 ? Math.max(...dotCenters(placed).map(dot => dot.x)) + dotRadius : box.right
+    const flag = isNoteHead(head) && head.flagged && head.stem === 'up' ? box.right + 0.9 * head.scale : box.right
+    return Math.max(box.right, dots, flag) - x
+}
+
+/** How far a head reaches to the left of its place: its glyph, and its accidental. */
+const reachLeft = (placed: PlacedHead): number => {
+    const { head, x } = placed
+    const box = headBox(placed)
+    const accidental = isNoteHead(head) && head.note.accidental
+        ? glyphWidth(accidentalGlyphs[head.note.accidental], head.scale) + accidentalGap * head.scale
+        : 0
+    return x - box.left + accidental
+}
+
+/**
+ * Between the measured layout and the source's, the heads of a chord part one
+ * after another, and on their way they would run into each other. Where heads
+ * of a staff less than a third apart would touch, the later gives way to the
+ * right, `weight` of the way to keeping clear (1: wholly). Heads at one place
+ * stay together, as one chord.
+ */
+export const keepApart = (placed: ReadonlyMap<ElementId, PlacedHead>, weight: number): Map<ElementId, PlacedHead> => {
+    if (weight <= 0) return new Map(placed)
+    const apart = new Map(placed)
+    const notes = [...placed.values()].filter(isPlacedNote)
+    for (const heads of groupBy(notes, ({ head }) => head.staff).values()) {
+        // the heads at one place, from left to right
+        const places = [...groupBy(heads, ({ x }) => Math.round(x * 1000)).values()].sort((a, b) => a[0].x - b[0].x)
+        const moved: { readonly x: number, readonly by: number, readonly heads: readonly PlacedHead<NoteHead>[] }[] = []
+        for (const group of places) {
+            const x = group[0].x
+            let by = 0
+            for (const before of moved) {
+                const natural = x - before.x
+                if (natural > 6) continue
+                for (const a of before.heads) for (const b of group) {
+                    if (Math.abs(a.head.position - b.head.position) > 2) continue
+                    // from where the earlier head now stands, which may have given way itself
+                    const reach = reachRight(a) + partingGap + reachLeft(b)
+                    const near = Math.min(natural, reach)
+                    by = Math.max(by, before.x + before.by + near + (reach - near) * weight - x)
+                }
+            }
+            moved.push({ x, by, heads: group })
+            if (by > 0) group.forEach(head => apart.set(head.head.id, { ...head, x: head.x + by }))
+        }
+    }
+    return apart
 }
