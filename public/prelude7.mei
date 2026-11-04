@@ -268,7 +268,6 @@
                      </harm>
                      <tie startid="#nxy3ry2" endid="#n12yp5re" curvedir="above" />
                   </measure>
-                  <sb />
                   <measure xml:id="m1gxpje7" n="4">
                      <staff xml:id="s15jiqfr" n="1">
                         <layer type="cantus" n="1">
@@ -324,6 +323,7 @@
                         <layer type="bassus" n="5">
                            <note xml:id="n1x7yxv7" dur="2" dots="1" oct="3" pname="e" stem.dir="down" precedes="#grace034" corresp="#path1397-0-15-2-4-93 #path46" />
 
+                           <sb />
                            <note type="ornam" xml:id="grace041" grace="unknown" dur="4" oct="3" pname="e" stem.dir="up" precedes="#grace042" corresp="#path1397-0-15-2-4-01" />
                            <note type="ornam" xml:id="grace042" grace="unknown" dur="4" oct="3" pname="d" stem.dir="up" precedes="#grace043" corresp="#path1397-0-15-2-4-77" />
                            <note type="ornam" xml:id="grace043" grace="unknown" dur="4" oct="3" pname="c" accid="s" stem.dir="up" precedes="#grace044" corresp="#path1397-0-15-2-4-665" />

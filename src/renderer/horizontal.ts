@@ -9,7 +9,7 @@ import { unionAll } from './geometry'
 import { glyphBox } from './glyph'
 import type { ElementId } from './model'
 import { clusterOffsets, Extent, footprint, PlacedHead } from './noteheads'
-import { Rational } from './rational'
+import { maxOf, Rational } from './rational'
 import { contentStart, markSignature, signatureGlyphs } from './signatures'
 import { Gap, minimumWidth, spread, widthAtStretch } from './spacing'
 
@@ -24,8 +24,28 @@ export interface Knot {
     readonly x: number
 }
 
+/**
+ * A measure, or a part of it: where the source begins a new line within a
+ * measure (an <sb/> in one of its layers), the measure is cut there. What the
+ * source reads before the break stays with the line before; what it does not
+ * read goes by its place in notated time.
+ */
+export interface Segment {
+    readonly measure: number
+    /** which part of its measure, from 0 */
+    readonly part: number
+    readonly heads: readonly Head[]
+    /** where in its measure, in notated time, it begins and ends */
+    readonly start: Rational
+    readonly end: Rational
+    /** whether its measure ends with it, and with it its barline */
+    readonly last: boolean
+    /** whether the source begins a new line with it */
+    readonly breakBefore: boolean
+}
+
 export interface SystemLayout {
-    readonly measures: readonly number[]
+    readonly segments: readonly Segment[]
     /** where the music begins, after the clefs and key signatures */
     readonly contentStart: number
     /** the x of each head's origin */
@@ -45,7 +65,7 @@ export interface HorizontalOptions {
      * writes them on one line: the reading of the source is spread over that
      * stretch rather than over the whole system.
      */
-    readonly readingSpan?: (measures: readonly number[]) => { readonly start: number, readonly end: number } | undefined
+    readonly readingSpan?: (heads: readonly Head[]) => { readonly start: number, readonly end: number } | undefined
 }
 
 /** Piecewise linear between the knots, constant beyond them; at a repeated time the last knot holds. */
@@ -146,7 +166,7 @@ const placeContent = (
 // ---------------------------------------------------------------------------
 // Places
 
-/** A place on a line: what is drawn there, relative to it - or the barline closing a measure. */
+/** A place on a line: what is drawn there, relative to it - or the end of a segment, a barline if it ends its measure. */
 interface Place extends Content {
     readonly measure: number
     /** how far along its measure the place lies: notated time when measured, the reading step when not */
@@ -166,8 +186,9 @@ const measuredStaff = (analysis: Analysis) => (heads: readonly Head[], marks: re
     return leadInto(analysis, placeCluster(heads.filter(head => head.graceRank === 0)), [...graceRanks, ...marks.map(markAt)])
 }
 
-const measuredPlaces = (analysis: Analysis, measure: number, heads: readonly Head[], marks: readonly number[]): Place[] => {
-    const length = analysis.measureLengths[measure]
+const measuredPlaces = (analysis: Analysis, segment: Segment, marks: readonly number[]): Place[] => {
+    const { measure, heads } = segment
+    const length = segment.end
     const onsetOf = (mark: number) => analysis.marks[mark].onset
     const onsets = [...new Map([...heads.map(head => head.onset), ...marks.map(onsetOf)]
         .map(onset => [onset.toString(), onset])).values()]
@@ -192,7 +213,7 @@ const measuredPlaces = (analysis: Analysis, measure: number, heads: readonly Hea
  * clef or key leads into the first note read under it; one under which nothing
  * in the measure is read stands before the barline.
  */
-const readingPlaces = (analysis: Analysis, measure: number, heads: readonly Head[], marks: readonly number[]): Place[] => {
+const readingPlaces = (analysis: Analysis, { measure, heads }: Segment, marks: readonly number[]): Place[] => {
     const read = heads.flatMap(head => (head.kind === 'note' && head.step !== undefined ? [{ head, step: head.step }] : []))
     const steps = [...groupBy(read, ({ step }) => step).entries()].sort(([a], [b]) => a - b)
     const readSteps = new Set(steps.map(([step]) => step))
@@ -284,22 +305,25 @@ const spreadReading = (
 
 const layOutSystem = (
     analysis: Analysis,
-    measures: readonly number[],
-    placesOf: (measure: number, beginsSystem: boolean) => MeasurePlaces,
+    segments: readonly Segment[],
+    placesOf: (segment: Segment, beginsSystem: boolean) => MeasurePlaces,
     options: HorizontalOptions
 ): SystemLayout => {
-    const start = contentStart(analysis.measureStates[measures[0]])
+    const [first] = segments
+    const start = contentStart(analysis.measureStates[first.measure])
     const width = options.systemWidth - start
-    const places = measures.map((measure, k) => placesOf(measure, k === 0))
+    const places = segments.map((segment, k) => placesOf(segment, k === 0))
     const measured = places.flatMap(place => place.measured)
     const reading = places.flatMap(place => place.reading)
     const measuredXs = spread(gapsOf(analysis, measured), start, width)
-    const readingXs = spreadReading(gapsOf(analysis, reading), reading, start, options, options.readingSpan?.(measures))
+    const readingXs = spreadReading(
+        gapsOf(analysis, reading), reading, start, options, options.readingSpan?.(segments.flatMap(segment => segment.heads))
+    )
 
     const readingHeads = positions(reading, readingXs, headParts)
     const readingMarks = positions(reading, readingXs, markParts)
     const timeOf = (place: Place) => analysis.measureStarts[place.measure].toNumber() + place.along
-    const origin = { time: analysis.measureStarts[measures[0]].toNumber(), x: start }
+    const origin = { time: analysis.measureStarts[first.measure].plus(first.start).toNumber(), x: start }
 
     const measuredKnots = [origin, ...measured.map((place, i) => ({ time: timeOf(place), x: measuredXs[i] }))]
 
@@ -328,7 +352,7 @@ const layOutSystem = (
         }] as const)))
 
     return {
-        measures,
+        segments,
         contentStart: start,
         slots: slotsOf(headParts, readingHeads),
         marks: slotsOf(markParts, readingMarks),
@@ -340,26 +364,70 @@ const layOutSystem = (
     }
 }
 
-export const layOutHorizontally = (analysis: Analysis, options: HorizontalOptions): SystemLayout[] => {
-    const headsByMeasure = groupBy(analysis.heads, head => head.measure)
-    const placesOf = (measure: number, beginsSystem: boolean): MeasurePlaces => {
-        const heads = headsByMeasure.get(measure) ?? []
-        const marks = marksOf(analysis, measure, beginsSystem)
-        return {
-            measured: measuredPlaces(analysis, measure, heads, marks),
-            reading: readingPlaces(analysis, measure, heads, marks),
-        }
-    }
-    // A measure joins a system if both its layouts fit: the measured one at its
-    // tightest, the unmeasured one with the room its reading steps ask for.
-    const widths = analysis.score.measures.map((_, measure) => {
-        const { measured, reading } = placesOf(measure, false)
-        return Math.max(minimumWidth(gapsOf(analysis, measured)), widthAtStretch(gapsOf(analysis, reading), readingStep))
-    })
-    const available = (first: number) => options.systemWidth - contentStart(analysis.measureStates[first])
+/** The step at which the source reads a head, if it reads it. */
+const stepOf = (head: Head): number | undefined => (head.kind === 'note' ? head.step : undefined)
 
-    return splitGreedily(analysis.score.measures.map((_, measure) => measure), (measure, system) =>
-        analysis.score.measures[measure].breakBefore
-        || sum(system.map(m => widths[m])) + widths[measure] > available(system[0])
+/** A little time, for a segment to end after the last of its heads. */
+const tick = Rational.of(1, 64)
+
+/** The measures cut where the source begins a new line within them. */
+const segmentsOf = (analysis: Analysis): Segment[] => {
+    const headsByMeasure = groupBy(analysis.heads, head => head.measure)
+    return analysis.score.measures.flatMap((measure, index) => {
+        const heads = headsByMeasure.get(index) ?? []
+        // where the lines begin, in the order they are read
+        const breaks = measure.lineBreaks
+            .map(id => analysis.headById.get(id))
+            .filter(isDefined)
+            .flatMap(head => { const step = stepOf(head); return step === undefined ? [] : [{ step, onset: head.onset }] })
+            .sort((a, b) => a.step - b.step)
+        const partOf = (head: Head) => {
+            const step = stepOf(head)
+            return step !== undefined
+                ? breaks.filter(cut => cut.step <= step).length
+                : breaks.filter(cut => cut.onset.compare(head.onset) <= 0).length
+        }
+        const parts = breaks.length + 1
+        return Array.from({ length: parts }, (_, part): Segment => {
+            const own = heads.filter(head => partOf(head) === part)
+            const last = part === parts - 1
+            const start = part === 0 ? Rational.zero : breaks[part - 1].onset
+            const latest = maxOf(own.map(head => head.onset))
+            const next = last ? analysis.measureLengths[index] : breaks[part].onset
+            return {
+                measure: index,
+                part,
+                heads: own,
+                start,
+                end: last || next.compare(latest) > 0 ? next : latest.plus(tick),
+                last,
+                breakBefore: part === 0 ? measure.breakBefore : true,
+            }
+        })
+    })
+}
+
+export const layOutHorizontally = (analysis: Analysis, options: HorizontalOptions): SystemLayout[] => {
+    const segments = segmentsOf(analysis)
+    const placesOf = (segment: Segment, beginsSystem: boolean): MeasurePlaces => {
+        // the changes of clef or key the segment draws: those within its stretch of the measure
+        const within = (mark: number) => {
+            const onset = analysis.marks[mark].onset
+            return onset.compare(segment.start) >= 0 && (segment.last || onset.compare(segment.end) < 0)
+        }
+        const marks = marksOf(analysis, segment.measure, beginsSystem && segment.part === 0).filter(within)
+        return { measured: measuredPlaces(analysis, segment, marks), reading: readingPlaces(analysis, segment, marks) }
+    }
+    // A segment joins a system if both its layouts fit: the measured one at its
+    // tightest, the unmeasured one with the room its reading steps ask for.
+    const widths = new Map(segments.map(segment => {
+        const { measured, reading } = placesOf(segment, false)
+        return [segment, Math.max(minimumWidth(gapsOf(analysis, measured)), widthAtStretch(gapsOf(analysis, reading), readingStep))]
+    }))
+    const widthOf = (segment: Segment) => widths.get(segment) ?? 0
+    const available = (first: Segment) => options.systemWidth - contentStart(analysis.measureStates[first.measure])
+
+    return splitGreedily(segments, (segment, system) =>
+        segment.breakBefore || sum(system.map(widthOf)) + widthOf(segment) > available(system[0])
     ).map(system => layOutSystem(analysis, system, placesOf, options))
 }

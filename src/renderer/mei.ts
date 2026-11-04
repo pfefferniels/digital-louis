@@ -6,7 +6,7 @@
 import { isDefined, splitGreedily } from './algorithms'
 import {
     Accidental, Barline, Beam, Bracket, Chord, Clef, ClefShape, ControlEvent, Direction, Duration, ElementId,
-    elementId, FiguredBass, KeySignature, Layer, LayerEvent, Measure, Meter, noKeySignature, Note, NoteValue,
+    elementId, FiguredBass, KeySignature, Layer, LayerEvent, Measure, Meter, noKeySignature, Note, notesOf, NoteValue,
     Ornament, OrnamentSign, Pitch, PitchName, Place, Rest, RestValue, Score, Space, Staff, StaffChange, StaffDef,
     StaffNumber, staffNumber, StemDirection, Tie, Timestamp,
 } from './model'
@@ -214,14 +214,36 @@ const readSpace = (element: Element): Space =>
 interface LayerContent {
     readonly events: readonly LayerEvent[]
     readonly beams: readonly Beam[]
+    /** the notes a system break stands before */
+    readonly lineBreaks: readonly ElementId[]
+    /** whether a system break ends the content, standing before what follows it */
+    readonly breakAfter: boolean
 }
 
-const single = (event: LayerEvent): LayerContent => ({ events: [event], beams: [] })
+const single = (event: LayerEvent): LayerContent => ({ events: [event], beams: [], lineBreaks: [], breakAfter: false })
 
-const concatenate = (parts: readonly LayerContent[]): LayerContent => ({
-    events: parts.flatMap(part => part.events),
-    beams: parts.flatMap(part => part.beams),
-})
+/** A system break within a layer: the source begins a new line with the next note. */
+const lineBreak: LayerContent = { events: [], beams: [], lineBreaks: [], breakAfter: true }
+
+const concatenate = (parts: readonly LayerContent[]): LayerContent => {
+    const lineBreaks: ElementId[] = []
+    let pending = false
+    for (const part of parts) {
+        const first = part.events.flatMap(notesOf)[0]
+        if (pending && first) {
+            lineBreaks.push(first.id)
+            pending = false
+        }
+        lineBreaks.push(...part.lineBreaks)
+        pending = part.breakAfter || (pending && first === undefined)
+    }
+    return {
+        events: parts.flatMap(part => part.events),
+        beams: parts.flatMap(part => part.beams),
+        lineBreaks,
+        breakAfter: pending,
+    }
+}
 
 const readBeam = (element: Element, grace: boolean): LayerContent => {
     const content = concatenate(children(element).map(child => readLayerContent(child, grace)))
@@ -230,7 +252,7 @@ const readBeam = (element: Element, grace: boolean): LayerContent => {
         types: tokens(optional(element, 'type')),
         members: content.events.flatMap(event => (event.kind === 'note' || event.kind === 'chord' ? [event.id] : [])),
     }
-    return { events: content.events, beams: [...content.beams, beam] }
+    return { ...content, beams: [...content.beams, beam] }
 }
 
 const readLayerContent = (element: Element, grace: boolean): LayerContent => {
@@ -242,23 +264,30 @@ const readLayerContent = (element: Element, grace: boolean): LayerContent => {
         case 'beam': return readBeam(element, grace)
         case 'graceGrp': return concatenate(children(element).map(child => readLayerContent(child, true)))
         case 'clef': return single({ kind: 'clef', id: optionalId(element), clef: readClef(element) })
+        case 'sb': return lineBreak
         default: return fail(element, 'not part of the dialect')
     }
 }
 
-const readLayer = (element: Element): Layer => {
+const readLayer = (element: Element): Layer & { readonly lineBreaks: readonly ElementId[] } => {
     const content = concatenate(children(element).map(child => readLayerContent(child, false)))
     return {
         n: requiredNumber(element, 'n'),
         voice: optional(element, 'type'),
         events: content.events,
         beams: content.beams,
+        lineBreaks: content.lineBreaks,
     }
 }
 
-const readStaff = (element: Element): Staff => {
+const readStaff = (element: Element): Staff & { readonly lineBreaks: readonly ElementId[] } => {
     expectChildren(element, ['layer'])
-    return { n: staffNumber(requiredNumber(element, 'n')), layers: children(element).map(readLayer) }
+    const layers = children(element).map(readLayer)
+    return {
+        n: staffNumber(requiredNumber(element, 'n')),
+        layers: layers.map(({ n, voice, events, beams }) => ({ n, voice, events, beams })),
+        lineBreaks: layers.flatMap(layer => layer.lineBreaks),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -327,14 +356,18 @@ const readControl = (element: Element): ControlEvent[] => {
     }
 }
 
-const readMeasure = (element: Element, breakBefore: boolean, changes: readonly StaffChange[]): Measure => ({
-    id: optionalId(element),
-    staves: childrenNamed(element, 'staff').map(readStaff),
-    controls: children(element).filter(child => child.localName !== 'staff').flatMap(readControl),
-    rightBarline: oneOf(element, 'right', barlines) ?? 'single',
-    breakBefore,
-    changes,
-})
+const readMeasure = (element: Element, breakBefore: boolean, changes: readonly StaffChange[]): Measure => {
+    const staves = childrenNamed(element, 'staff').map(readStaff)
+    return {
+        id: optionalId(element),
+        staves: staves.map(({ n, layers }) => ({ n, layers })),
+        controls: children(element).filter(child => child.localName !== 'staff').flatMap(readControl),
+        rightBarline: oneOf(element, 'right', barlines) ?? 'single',
+        breakBefore,
+        lineBreaks: staves.flatMap(staff => staff.lineBreaks),
+        changes,
+    }
+}
 
 const readStaffChange = (staffDef: Element): StaffChange =>
     ({ staff: staffNumber(requiredNumber(staffDef, 'n')), clef: clefOf(staffDef), key: keyOf(staffDef) })

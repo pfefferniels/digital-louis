@@ -9,7 +9,7 @@ import { Analysis, asUnmeasured } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
 import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
-import { interpolate, Slot, SystemLayout } from './horizontal'
+import { interpolate, Segment, Slot, SystemLayout } from './horizontal'
 import { engravingDefaults } from './leipzig'
 import type { Barline, ElementId } from './model'
 import { markSignature, systemSignature } from './signatures'
@@ -62,9 +62,9 @@ const barlineLines = (x: number, style: Barline, top: number): Drawing[] => {
 const obstaclesOn = (staff: Group): Box[] =>
     staff.children.filter(child => child.kind !== 'line').flatMap(primitiveBoxes)
 
-/** A system engraved staff by staff, before the staves are stacked. */
+/** A system engraved staff by staff, before the staves are stacked: each of its segments of measures. */
 interface SystemParts {
-    readonly measures: readonly { readonly measure: number, readonly staves: readonly Group[] }[]
+    readonly measures: readonly { readonly segment: Segment, readonly staves: readonly Group[] }[]
     readonly controls: readonly StaffDrawing[]
     /** what each staff takes up, with what is drawn about it */
     readonly extents: readonly Box[]
@@ -83,7 +83,8 @@ const engraveParts = (
     const barlines = layout.barlines.map(slot => at(slot, t))
     const staffIndices = score.staves.map((_, i) => i)
 
-    const measures = layout.measures.map((measure, k) => {
+    const measures = layout.segments.map((segment, k) => {
+        const { measure } = segment
         const staves = staffIndices.map(staff => engraveStaff({
             analysis,
             measure,
@@ -99,16 +100,21 @@ const engraveParts = (
                     .map(([mark, slot]) => markSignature(analysis.marks[mark], at(slot, t))),
             ],
         }))
-        return { measure, staves }
+        return { segment, staves }
     })
 
     const staffBoxes = new Map(staffIndices.map(staff => [staff, unionAll(
         measures.map(({ staves }) => boundsOf(staves[staff])).filter(isDefined)
     ) ?? emptyStaff]))
 
+    const [first, last] = [layout.segments[0], layout.segments[layout.segments.length - 1]]
     const controls = engraveControls({
         analysis,
-        measures: layout.measures,
+        measures: layout.segments.map(segment => segment.measure),
+        span: {
+            start: analysis.measureStarts[first.measure].plus(first.start).toNumber(),
+            end: analysis.measureStarts[last.measure].plus(last.end).toNumber(),
+        },
         placed,
         obstacles: new Map(staffIndices.map(staff => [staff, measures.flatMap(({ staves }) => obstaclesOn(staves[staff]))])),
         staffBoxes,
@@ -142,11 +148,15 @@ const assemble = (analysis: Analysis, parts: SystemParts, tops: readonly number[
     )
     return group(['system'], [
         systemLine,
-        ...parts.measures.map(({ measure, staves }, k) => group(['measure'], [
-            ...staves.map((staff, s) => translate(staff, 0, tops[s])),
-            group(['barLine'], tops.flatMap(top => barlineLines(parts.barlines[k], score.measures[measure].rightBarline, top))),
-            ...parts.controls.filter(control => control.measure === measure).map(onStaff),
-        ], { id: score.measures[measure].id })),
+        ...parts.measures.map(({ segment: { measure, part, last }, staves }, k) => {
+            const id = score.measures[measure].id
+            return group(['measure'], [
+                ...staves.map((staff, s) => translate(staff, 0, tops[s])),
+                // where the source breaks the line within a measure, there is no barline
+                group(['barLine'], last ? tops.flatMap(top => barlineLines(parts.barlines[k], score.measures[measure].rightBarline, top)) : []),
+                ...parts.controls.filter(control => control.measure === measure).map(onStaff),
+            ], { id: id && part > 0 ? `${id}-${part}` as ElementId : id })
+        }),
     ])
 }
 

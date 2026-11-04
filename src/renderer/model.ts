@@ -177,6 +177,11 @@ export interface Measure {
     readonly rightBarline: Barline
     /** whether an encoded system break (<sb/>) comes right before the measure */
     readonly breakBefore: boolean
+    /**
+     * The notes before which a system break (<sb/>) stands within a layer:
+     * where the source begins a new line within the measure.
+     */
+    readonly lineBreaks: readonly ElementId[]
     /** what the score definitions before the measure change */
     readonly changes: readonly StaffChange[]
 }
