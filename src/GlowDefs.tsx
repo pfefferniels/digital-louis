@@ -1,6 +1,7 @@
 export const GlowDefs = () => {
     return (
-        <svg width={0} height={0}>
+        // out of the flow of the page: it only defines the filters
+        <svg width={0} height={0} style={{ position: 'absolute' }}>
             <defs>
                 <filter id="purple-glow" x="-5000%" y="-5000%" width="10000%" height="10000%">
                     <feFlood result="flood" floodColor="darkred" floodOpacity="1"></feFlood>

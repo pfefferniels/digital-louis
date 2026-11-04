@@ -1,5 +1,4 @@
-import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, FormGroup, Paper, Slider, Typography, useMediaQuery } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2'
+import { Alert, Box, Checkbox, Container, FormControlLabel, Paper, Slider, Stack, Typography, useMediaQuery } from '@mui/material';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './App.css'
 import { draw, Noteheads, prepare, PreparedScore } from './renderer';
@@ -75,18 +74,6 @@ const useShownPosition = (target: number, animate: boolean): number => {
 /** The room left and right of the slider, in spacing units, into which the labels at its ends reach */
 const sliderInset = { xs: 4, sm: 6 }
 
-/**
- * Lets the facsimile, drawn in Inkscape at a size in millimetres, take the width it is
- * given: its view box becomes what it draws, and its height follows from its width.
- */
-const fitToContent = (svg: SVGSVGElement) => {
-  const { x, y, width, height } = svg.getBBox()
-  if (width === 0 || height === 0) return
-  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`)
-  svg.removeAttribute('width')
-  svg.removeAttribute('height')
-}
-
 interface ViewOptions {
   readonly modernClefs: boolean
   /** the semi-measured view beams the ornaments and leaves out the notes tied over */
@@ -119,7 +106,8 @@ interface WorkProps {
 const Work = ({ id }: WorkProps) => {
   const [meiDoc, setMeiDoc] = useState<Document>()
 
-  const [facsimile, setFacsimile] = useState<string>()
+  // the facsimile of the source, laid into the score as its last step
+  const [source, setSource] = useState<SVGSVGElement>()
   const [svgFile, setSVGFile] = useState<string>()
 
   const [modernClefs, setModernClefs] = useState(false)
@@ -128,7 +116,6 @@ const Work = ({ id }: WorkProps) => {
 
   const score = useRef<HTMLDivElement>(null)
   const ghost = useRef<HTMLDivElement>(null)
-  const facsimileView = useRef<HTMLDivElement>(null)
 
   // on a touch screen, a note is tapped rather than hovered over
   const touch = useMediaQuery('(hover: none)')
@@ -141,7 +128,8 @@ const Work = ({ id }: WorkProps) => {
 
     const loadFacsimile = async () => {
       const response = await fetch(import.meta.env.BASE_URL + '/' + svgFile)
-      setFacsimile(await response.text())
+      const facsimile = new DOMParser().parseFromString(await response.text(), 'image/svg+xml').documentElement
+      setSource(facsimile instanceof SVGSVGElement ? facsimile : undefined)
     }
 
     loadFacsimile()
@@ -160,12 +148,6 @@ const Work = ({ id }: WorkProps) => {
 
     loadEncoding()
   }, [id])
-
-  // before the score, whose way into the source needs the facsimile as fitted
-  useLayoutEffect(() => {
-    const svg = facsimileView.current?.querySelector('svg')
-    if (svg) fitToContent(svg)
-  }, [facsimile])
 
   // Both readings are prepared at once, for the view to pass from one to the other without delay.
   const regular = useMemo(() => meiDoc && prepareView(meiDoc, { modernClefs, semiMeasured: false }), [meiDoc, modernClefs])
@@ -192,8 +174,6 @@ const Work = ({ id }: WorkProps) => {
       drawn.current = undefined
       return
     }
-    const source = facsimileView.current?.querySelector('svg')
-
     // The score is drawn anew only where what is drawn changes, frame by frame
     // between the measured and the unmeasured view; the steps before only fade
     // voices in and out, the way into the source only moves what is drawn.
@@ -216,7 +196,7 @@ const Work = ({ id }: WorkProps) => {
     changeVisibilities(svg, shown)
     if (before && ghost.current) crossfade(before, svg, ghost.current)
     if (source) morph(svg, source, intoSource)
-  }, [prepared, t, noteheads, unmeasuredSpacing, shown, intoSource, facsimile, animate])
+  }, [prepared, t, noteheads, unmeasuredSpacing, shown, intoSource, source, animate])
 
   // Both the semi-measured and the unmeasured view draw tenues following the
   // practice of the Bauyn manuscript, once the view has come to rest. They are
@@ -229,33 +209,33 @@ const Work = ({ id }: WorkProps) => {
     return () => clearTimeout(timer)
   }, [resting, shown, prepared])
 
+  // In the manuscript, the notes are linked to their traces:
+  // by hovering with a mouse, by tapping on a touch screen.
   useLayoutEffect(() => {
-    // once encoding and facsimile are loaded, connect them:
-    // by hovering with a mouse, by tapping on a touch screen
-    if (!facsimile || !score.current || !facsimileView.current) return
-    return (touch ? highlightOnTap : highlightOnHover)(score.current, facsimileView.current)
-  }, [facsimile, touch])
-
+    if (!score.current) return
+    return (touch ? highlightOnTap : highlightOnHover)(score.current)
+  }, [touch])
 
   const sourceName = meiDoc?.querySelector('source')?.textContent?.replace(/\s+/g, ' ').trim() || 'Manuscrit'
 
   useEffect(() => {
-    // An aid for the editors, who work with a mouse: a click on a trace of the
-    // facsimile copies its id, to link it to a note. On a touch screen, a tap
+    // An aid for the editors, who work with a mouse: in the manuscript, a click
+    // on a trace copies its id, to link it to a note. On a touch screen, a tap
     // is only to highlight a note, not to fill the clipboard.
-    const view = facsimileView.current
+    const view = score.current
     if (!view || touch) return
 
     const copyId = (event: MouseEvent) => {
-      if (event.target instanceof SVGPathElement && event.target.id) {
-        navigator.clipboard.writeText('#' + event.target.id)
+      const trace = event.target
+      if (trace instanceof SVGPathElement && trace.id && trace.closest('.source-scan')) {
+        navigator.clipboard.writeText('#' + trace.id)
       }
     }
     view.addEventListener('click', copyId)
     return () => view.removeEventListener('click', copyId)
-  }, [facsimile, touch])
+  }, [touch])
 
-  // While the view moves, frame by frame, the controls and the facsimile stay as they are.
+  // While the view moves, frame by frame, the controls stay as they are.
   const controls = useMemo(() => (
     <>
       <Box sx={{ px: sliderInset, pt: 1, pb: { xs: 2, sm: 1.5 } }}>
@@ -318,52 +298,36 @@ const Work = ({ id }: WorkProps) => {
           }}
         />
       </Box>
-      <FormGroup sx={{ px: 2 }}>
+      <Stack direction='row' alignItems='center' justifyContent='space-between' flexWrap='wrap' columnGap={2} sx={{ px: 2 }}>
         <FormControlLabel
           control={<Checkbox
             checked={modernClefs}
             onChange={(_, checked) => setModernClefs(checked)} />}
           label="Modern clefs" />
-      </FormGroup>
-    </>
-  ), [position, sourceName, modernClefs])
-
-  const facsimilePanel = useMemo(() => (
-    <Paper style={{ position: 'relative' }} elevation={3}>
-      <Typography sx={{ padding: 1 }}>
-        <i style={{ color: 'black' }}>
+        {/* kept in place where it is hidden, for the score not to move when it shows */}
+        <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'text.secondary', visibility: position === manuscript ? 'visible' : 'hidden' }}>
           {touch
-            ? 'Tap a note to highlight its counterparts in the facsimile/score.'
-            : 'Hover over the notes to highlight their counterparts in the facsimile/score.'}
-        </i>
-      </Typography>
-
-      {facsimile
-        ? <div className='facsimile' ref={facsimileView} dangerouslySetInnerHTML={{ __html: facsimile }} />
-        : <CircularProgress />}
-    </Paper>
-  ), [facsimile, touch])
+            ? 'Tap a note of the manuscript to see how the edition reads it.'
+            : 'Hover over a note of the manuscript to see how the edition reads it.'}
+        </Typography>
+      </Stack>
+    </>
+  ), [position, sourceName, modernClefs, touch])
 
   return (
-    <Grid container spacing={1}>
+    <Container maxWidth='md' disableGutters>
       <GlowDefs />
+      <Paper elevation={3}>
+        {controls}
 
-      <Grid xs={12} md={6}>
-        <Paper elevation={3}>
-          {controls}
-
-          {prepared && 'error' in prepared && <Alert severity='error'>{prepared.error}</Alert>}
-          <Box sx={{ position: 'relative' }}>
-            {/* drawn by the effects above, not by React */}
-            <div id='score' ref={score} />
-            <div className='score-ghost' ref={ghost} />
-          </Box>
-        </Paper>
-      </Grid>
-      <Grid xs={12} md={6}>
-        {facsimilePanel}
-      </Grid>
-    </Grid>
+        {prepared && 'error' in prepared && <Alert severity='error'>{prepared.error}</Alert>}
+        <Box sx={{ position: 'relative' }}>
+          {/* drawn by the effects above, not by React */}
+          <div id='score' ref={score} />
+          <div className='score-ghost' ref={ghost} />
+        </Box>
+      </Paper>
+    </Container>
   )
 }
 

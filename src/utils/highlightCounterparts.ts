@@ -1,16 +1,18 @@
 /**
- * Linking score and facsimile: a note of the score and the traces of the
- * facsimile it corresponds to (@corresp) are highlighted together. With a
- * mouse, while one of them is hovered over. On a touch screen, where a
- * notehead is a few pixels across, too small to hit with a finger, and a tap
- * leaves no hover behind, a tap selects the note or trace nearest to it, and
- * it stays highlighted with its counterparts until the next tap.
+ * Linking the notes of the edition to the traces of the manuscript they
+ * correspond to (@corresp). The manuscript is the last layer of the score (see
+ * `sourceMorph`): there, a note and its traces are highlighted together, and
+ * the note the edition reads shows above the handwritten one. With a mouse,
+ * while either is hovered over. On a touch screen, where a notehead is a few
+ * pixels across, too small to hit with a finger, and a tap leaves no hover
+ * behind, a tap selects the note nearest to it until the next tap. Before the
+ * manuscript is laid in, no trace is drawn, and nothing is linked.
  *
- * The listeners sit on the views of score and facsimile, not on their notes,
- * so that a score drawn anew needs no new ones.
+ * The listeners sit on the view of the score, not on its notes, so that a
+ * score drawn anew needs no new ones.
  */
 
-/** How far from a note or trace, in CSS pixels, a finger still reaches it */
+/** How far from a note, in CSS pixels, a finger still reaches it */
 const reach = 24
 
 interface Link {
@@ -39,94 +41,82 @@ const nearest = <T>(candidates: readonly T[], elementOf: (candidate: T) => Eleme
     return best
 }
 
-/** The traces in the facsimile a note corresponds to (@corresp, as `#id #id ...`). */
-const tracesOf = (note: Element, facsimile: Element): Element[] =>
+/** The traces of the manuscript drawn in `view` that a note corresponds to (@corresp, as `#id #id ...`). */
+const tracesOf = (note: Element, view: Element): Element[] =>
     (note.getAttribute('data-corresp') ?? '')
         .split(' ')
         .map(ref => document.getElementById(ref.replace(/^#/, '')))
-        .filter((trace): trace is HTMLElement => trace !== null && facsimile.contains(trace))
+        .filter((trace): trace is HTMLElement => trace !== null && view.contains(trace))
 
-/** Each note of the score with the traces in the facsimile it corresponds to. */
-const linksBetween = (score: Element, facsimile: Element): Link[] =>
-    Array.from(score.querySelectorAll('.note[data-corresp]')).flatMap(note => {
+/** Each note with the traces drawn of it. */
+const linksIn = (view: Element): Link[] =>
+    Array.from(view.querySelectorAll('.note[data-corresp]')).flatMap(note => {
         const head = note.querySelector('.notehead')
-        const traces = tracesOf(note, facsimile)
+        const traces = tracesOf(note, view)
         return head && traces.length > 0 ? [{ head, traces }] : []
     })
 
 const linkedNote = (target: EventTarget | null) =>
     target instanceof Element ? target.closest('.note[data-corresp]') : null
 
+const trace = (target: EventTarget | null) =>
+    target instanceof Element && target.id && target.closest('.source-scan') ? target : null
+
 /**
- * Lets hovering over a note highlight its traces in the facsimile, and
- * hovering over a trace the notes it is linked to. Returns what undoes it.
+ * Lets hovering over a note highlight its traces, and hovering over a trace
+ * the notes it belongs to. Returns what undoes it.
  */
-export const highlightOnHover = (score: HTMLElement, facsimile: HTMLElement): (() => void) => {
+export const highlightOnHover = (view: HTMLElement): (() => void) => {
     const glowing = new Set<Element>()
     const glow = (elements: readonly Element[], on: boolean) => elements.forEach(el => {
         el.classList.toggle('with-glow', on)
         if (on) glowing.add(el)
         else glowing.delete(el)
     })
+    const headsOf = (trace: Element) =>
+        Array.from(view.querySelectorAll(`.note[data-corresp~="#${CSS.escape(trace.id)}"] > .notehead`))
 
     // Over and out of a note, not of the parts it is drawn with.
-    const onScore = (on: boolean) => (event: MouseEvent) => {
+    const listener = (on: boolean) => (event: MouseEvent) => {
         const note = linkedNote(event.target)
-        if (note && note !== linkedNote(event.relatedTarget)) glow(tracesOf(note, facsimile), on)
+        if (note) {
+            if (note !== linkedNote(event.relatedTarget)) glow(tracesOf(note, view), on)
+            return
+        }
+        const over = trace(event.target)
+        if (over) glow(headsOf(over), on)
     }
 
-    const headsOf = (trace: Element) => Array.from(score.querySelectorAll(`.note[data-corresp~="#${CSS.escape(trace.id)}"] > .notehead`))
-    const onFacsimile = (on: boolean) => (event: MouseEvent) => {
-        const trace = event.target
-        if (trace instanceof Element && trace.id) glow(headsOf(trace), on)
-    }
-
-    const listeners: [HTMLElement, 'mouseover' | 'mouseout', (event: MouseEvent) => void][] = [
-        [score, 'mouseover', onScore(true)],
-        [score, 'mouseout', onScore(false)],
-        [facsimile, 'mouseover', onFacsimile(true)],
-        [facsimile, 'mouseout', onFacsimile(false)],
-    ]
-    listeners.forEach(([view, type, listener]) => view.addEventListener(type, listener))
+    const [over, out] = [listener(true), listener(false)]
+    view.addEventListener('mouseover', over)
+    view.addEventListener('mouseout', out)
     return () => {
-        listeners.forEach(([view, type, listener]) => view.removeEventListener(type, listener))
+        view.removeEventListener('mouseover', over)
+        view.removeEventListener('mouseout', out)
         glow([...glowing], false)
     }
 }
 
-/**
- * Lets a tap on the score or the facsimile highlight the nearest note or trace
- * and its counterparts. Returns what undoes it.
- */
-export const highlightOnTap = (score: HTMLElement, facsimile: HTMLElement): (() => void) => {
-    let highlighted: { readonly heads: readonly Element[]; readonly traces: readonly Element[] } = { heads: [], traces: [] }
+/** Lets a tap highlight the note nearest to it, and its traces. Returns what undoes it. */
+export const highlightOnTap = (view: HTMLElement): (() => void) => {
+    let highlighted: Link = { head: view, traces: [] }
 
-    const highlight = (heads: readonly Element[], traces: readonly Element[]) => {
-        highlighted.heads.forEach(head => head.classList.remove('selected'))
+    const highlight = (link: Link | undefined) => {
+        highlighted.head.classList.remove('selected')
         highlighted.traces.forEach(trace => trace.classList.remove('with-glow'))
-        heads.forEach(head => head.classList.add('selected'))
-        traces.forEach(trace => trace.classList.add('with-glow'))
-        highlighted = { heads, traces }
+        link?.head.classList.add('selected')
+        link?.traces.forEach(trace => trace.classList.add('with-glow'))
+        highlighted = link ?? { head: view, traces: [] }
     }
 
-    const onScoreTap = (event: MouseEvent) => {
-        const links = linksBetween(score, facsimile).filter(link => isVisible(link.head))
-        const link = nearest(links, link => link.head, event.clientX, event.clientY)
-        highlight(link ? [link.head] : [], link ? link.traces : [])
+    const onTap = (event: MouseEvent) => {
+        const links = linksIn(view).filter(link => isVisible(link.head))
+        highlight(nearest(links, link => link.head, event.clientX, event.clientY))
     }
 
-    const onFacsimileTap = (event: MouseEvent) => {
-        const links = linksBetween(score, facsimile)
-        const trace = nearest([...new Set(links.flatMap(link => link.traces))], trace => trace, event.clientX, event.clientY)
-        const heads = links.filter(link => trace && link.traces.includes(trace)).map(link => link.head)
-        highlight(heads, trace ? [trace] : [])
-    }
-
-    score.addEventListener('click', onScoreTap)
-    facsimile.addEventListener('click', onFacsimileTap)
+    view.addEventListener('click', onTap)
     return () => {
-        score.removeEventListener('click', onScoreTap)
-        facsimile.removeEventListener('click', onFacsimileTap)
-        highlight([], [])
+        view.removeEventListener('click', onTap)
+        highlight(undefined)
     }
 }
