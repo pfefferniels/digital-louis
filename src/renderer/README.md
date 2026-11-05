@@ -14,10 +14,16 @@ element.innerHTML = render(score, t)
 `render(score, t, { noteheads: 'unmeasured' })` draws every note as unmeasured
 notation writes it, as the Bauyn manuscript does: a semibreve of one size,
 ornaments and long notes alike, without stem, flag, beam or dots. The reading
-layout always leaves room for heads drawn that way.
+layout always leaves room for heads drawn that way. `{ noteheads: 'semi' }`
+draws them as d'Anglebert prints his preludes (Pièces de clavecin, 1689): the
+quick notes - ornaments and eighths - as eighths of full size, with stems,
+flags and beams, all others as semibreves.
 
 The viewer (`src/Work.tsx`) maps its slider onto the continuum: "Mesuré" is
-`t = 0`, "Non mesuré" is `t = 1`, drawn with unmeasured noteheads.
+`t = 0`, "Non mesuré" is `t = 1`, drawn with unmeasured noteheads; between
+them "Semi-mesuré" (`t = 2/3`) is drawn as d'Anglebert would, with bar lines
+and engraved slurs for its tenues (`src/utils/tenues/engraved.ts`), where the
+unmeasured view has the free strokes of the Bauyn manuscript.
 
 ## How it works
 

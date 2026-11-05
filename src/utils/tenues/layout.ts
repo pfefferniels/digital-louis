@@ -172,7 +172,7 @@ const meanRise = (m: BauynModel, run: number, hpos: number, r: TenueRequest) =>
     dot(m.rise.coef, [1, Math.min(Math.max(run, 0), m.rise.maxRun), hpos, ...contextFeatures(r)])
 
 /** Where the notes between a tenue's head and its end lie on its staff: 1 all below the head, -1 all above. */
-const passesOver = (r: TenueRequest, obstacles: readonly Obstacle[]) => {
+export const passesOver = (r: TenueRequest, obstacles: readonly Obstacle[]) => {
     const y = boxCenter(r.head).y
     let above = 0, below = 0
     for (const o of obstacles) {

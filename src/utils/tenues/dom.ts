@@ -3,8 +3,9 @@
  * offsets and obstacles from the rendered score, runs the layout and
  * inserts the calligraphic tenues.
  */
-import { Box } from './geometry'
+import { Box, Pt } from './geometry'
 import { Obstacle, ObstacleKind, PlacedTenue, TenueRequest, Voice, layoutTenues } from './layout'
+import { layoutEngraved, slurOutline } from './engraved'
 import { penOutline, polygonToSvgPath } from './pen'
 import model from './bauynModel.json'
 
@@ -37,6 +38,12 @@ const REACH: Record<Voice, { base: number, perSpace: number }> = {
  */
 const COPYIST_LINE = 54
 
+/** Whether a note is drawn as a quick one: with a stem, a flag or a beam of its own or its chord's. */
+const isQuick = (note: Element) =>
+    note.querySelector(':scope > .stem, :scope > .flag') !== null ||
+    note.closest('.beam')?.querySelector(':scope > polygon') != null ||
+    (note.parentElement?.matches('.chord') === true && note.parentElement.querySelector(':scope > .stem') !== null)
+
 /** The part a voice plays, by the type of its layer: the top voice, the bass, or one between. */
 const voiceOf = (note: Element): Voice => {
     const layer = note.closest('.layer')
@@ -44,6 +51,23 @@ const voiceOf = (note: Element): Voice => {
 }
 /** where the note that takes over stands on a later system: this far beyond the end of the line */
 const ONWARD = 4
+
+/**
+ * Whose tenues are drawn: the copyist's of the Bauyn manuscript, free
+ * strokes (`layout.ts`), or those of d'Anglebert's engraver, slurs
+ * (`engraved.ts`). D'Anglebert's are shorter, ending under or before the
+ * note that takes over; his engraver writes a line in about 60 staff spaces.
+ */
+export type TenueStyle = 'bauyn' | 'engraved'
+
+const STYLES: Record<TenueStyle, { reach: Record<Voice, { base: number, perSpace: number }>, line: number, minReach: number }> = {
+    bauyn: { reach: REACH, line: COPYIST_LINE, minReach: MIN_REACH },
+    engraved: {
+        reach: { top: { base: 1.2, perSpace: 0.15 }, inner: { base: 1.2, perSpace: 0.18 }, bass: { base: 1.5, perSpace: 0.3 } },
+        line: 60,
+        minReach: 1.5,
+    },
+}
 
 interface StaffInfo {
     el: Element
@@ -145,7 +169,8 @@ export const removeTenues = (svgEl: Element) => {
  * Inserts tenues for all visible notes that are held until a later note
  * of the same voice (@next) takes over.
  */
-export const insertTenues = (svgEl: SVGElement) => {
+export const insertTenues = (svgEl: SVGElement, style: TenueStyle = 'bauyn') => {
+    const { reach: reachOf, line, minReach } = STYLES[style]
     removeTenues(svgEl)
     const pageMargin = svgEl.querySelector('.page-margin') as SVGGraphicsElement | null
     if (!pageMargin) return
@@ -192,12 +217,14 @@ export const insertTenues = (svgEl: SVGElement) => {
 
         // how much wider than the copyist this line spreads its notes
         const lineStart = Math.min(...[...heads.values()].map(box => box.x0))
-        const spread = Math.min(3, Math.max(1, (lineEnd - lineStart) / COPYIST_LINE))
+        const spread = Math.min(3, Math.max(1, (lineEnd - lineStart) / line))
 
         const requests: TenueRequest[] = []
         for (const note of Array.from(system.querySelectorAll('.note[data-next]'))) {
             const classes = (note.getAttribute('class') || '').split(' ')
             if (classes.includes('ornam') || classes.includes('virtual')) continue
+            // d'Anglebert holds his whole notes, not the quick notes he writes as eighths
+            if (style === 'engraved' && isQuick(note)) continue
             const id = note.getAttribute('data-id') || ''
             const head = heads.get(id)
             const staff = staffOf(note)
@@ -220,7 +247,7 @@ export const insertTenues = (svgEl: SVGElement) => {
             // continuing on the next system may run a little into the margin
             const voice = voiceOf(note)
             const distance = takesOver - head.x1
-            const reach = Math.max(MIN_REACH, Math.min(REACH[voice].base + REACH[voice].perSpace * distance / spread, distance - END_GAP))
+            const reach = Math.max(minReach, Math.min(reachOf[voice].base + reachOf[voice].perSpace * distance / spread, distance - END_GAP))
             const endX = Math.min(head.x1 + reach, releasedBy ? lineEnd - END_GAP : lineEnd + MARGIN_REACH)
 
             const { above, below } = neighbours(staves, staff)
@@ -238,16 +265,20 @@ export const insertTenues = (svgEl: SVGElement) => {
         }
         if (requests.length === 0) continue
 
-        const placed = layoutTenues({ requests, obstacles })
-        if (document.documentElement.dataset.tenueDebug === '1') {
-            drawDebug(pageMargin, unit, obstacles, requests, placed)
+        let outlines: { id: string, outline: Pt[] }[]
+        if (style === 'engraved') {
+            outlines = layoutEngraved({ requests, obstacles }).map(tenue => ({ id: tenue.id, outline: slurOutline(tenue.curve) }))
+        } else {
+            const placed = layoutTenues({ requests, obstacles })
+            if (document.documentElement.dataset.tenueDebug === '1') drawDebug(pageMargin, unit, obstacles, requests, placed)
+            outlines = placed.map(tenue => ({ id: tenue.id, outline: penOutline(tenue.curve, model.pen) }))
         }
-        for (const tenue of placed) {
+        for (const { id, outline } of outlines) {
             const path = document.createElementNS(SVG_NS, 'path')
             path.setAttribute('class', 'tenue')
-            path.setAttribute('data-id', tenue.id)
+            path.setAttribute('data-id', id)
             path.setAttribute('fill', 'currentColor')
-            path.setAttribute('d', polygonToSvgPath(penOutline(tenue.curve, model.pen), unit))
+            path.setAttribute('d', polygonToSvgPath(outline, unit))
             pageMargin.appendChild(path)
         }
     }

@@ -175,7 +175,7 @@ const Work = ({ id }: WorkProps) => {
   // the continuum on; and from there the way into the source.
   const prepared = shown === semiMeasured ? semi : regular
   const t = continuumAt(Math.min(shown, continuumLength))
-  const noteheads: Noteheads = shown >= continuumLength ? 'unmeasured' : 'notated'
+  const noteheads: Noteheads = shown >= continuumLength ? 'unmeasured' : prepared === semi ? 'semi' : 'notated'
   const unmeasuredSpacing = Math.min(1, Math.max(0, (shown - semiMeasured) / step))
   const intoSource = Math.min(1, Math.max(0, (shown - continuumLength) / step))
 
@@ -215,8 +215,9 @@ const Work = ({ id }: WorkProps) => {
     if (source) morph(svg, source, intoSource)
   }, [prepared, t, noteheads, unmeasuredSpacing, shown, intoSource, source, animate])
 
-  // Both the semi-measured and the unmeasured view draw tenues following the
-  // practice of the Bauyn manuscript, once the view has come to rest. They are
+  // Both the semi-measured and the unmeasured view draw tenues, once the view
+  // has come to rest: the one as d'Anglebert's engraver, the other as the
+  // copyist of the Bauyn manuscript. They are
   // fitted to the notes where they are engraved, even in the source, and
   // once the notes have glided there (see `crossfade`).
   const resting = shown === position
@@ -227,7 +228,7 @@ const Work = ({ id }: WorkProps) => {
     const timer = setTimeout(() => {
       const gliding = svg.getAnimations({ subtree: true }).map(glide => glide.finished.catch(() => undefined))
       Promise.all(gliding).then(() => {
-        if (!cancelled && svg.isConnected) atRest(svg, () => insertTenues(svg))
+        if (!cancelled && svg.isConnected) atRest(svg, () => insertTenues(svg, shown === semiMeasured ? 'engraved' : 'bauyn'))
       })
     }, 100)
     return () => {

@@ -280,6 +280,16 @@ export const asUnmeasured = (head: Head): Head =>
         ? { ...head, glyph: 'noteheadWhole', scale: 1, stem: undefined, flagged: false, dots: 0 }
         : head
 
+/**
+ * A head as d'Anglebert writes an unmeasured prelude in print: the quick
+ * notes - ornaments, eighths - as eighths of full size, with their stems,
+ * flags and beams; all others as whole notes.
+ */
+export const asSemiMeasured = (head: Head): Head =>
+    head.kind === 'note' && (head.graceRank > 0 || head.note.duration.value === 'eighth')
+        ? { ...head, scale: 1 }
+        : asUnmeasured(head)
+
 /** A chord whose tones the source reads one after another is rolled: it cannot share one stem. */
 export const isRolled = (tones: readonly NoteHead[]): boolean =>
     new Set(tones.map(tone => tone.step)).size > 1
