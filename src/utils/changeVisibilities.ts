@@ -15,7 +15,8 @@ const lastStep = 300
 /**
  * What each step shows. The figured bass belongs to the harmonic framework, the
  * cadences to the form. A note's ledger lines and dots are drawn with it and show
- * with it.
+ * with it. The semi-measured view follows d'Anglebert's print, with bar lines;
+ * only its quick notes have stems.
  */
 const visibilityMap = new Map<string, string[]>([
     [
@@ -34,7 +35,7 @@ const visibilityMap = new Map<string, string[]>([
         'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.beam polygon', '.tie']
     ],
     [
-        'semi-mesure', ['.clef', '.beam polygon', '.beam .stem', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
+        'semi-mesure', ['.clef', '.beam polygon', '.stem', '.barLine', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
     ],
     [
         'non-mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']

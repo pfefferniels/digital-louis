@@ -311,7 +311,9 @@ export const keepApart = (
                     const byAccidental = accidental !== undefined && meet(height, accidental)
                     if (!byAccidental && !meet(height, headBox(b))) continue
                     // from where the earlier head now stands, which may have given way itself
-                    const reach = reachRight(a) + gap(a.head, b.head) + reachLeft(b, byAccidental ? accidental : undefined)
+                    // (grace notes may all but touch, but not where an accidental stands between them)
+                    const apart = byAccidental ? Math.max(partingGap, gap(a.head, b.head)) : gap(a.head, b.head)
+                    const reach = reachRight(a) + apart + reachLeft(b, byAccidental ? accidental : undefined)
                     const near = Math.min(natural, reach)
                     by = Math.max(by, before.x + before.by + near + (reach - near) * weight - x)
                 }

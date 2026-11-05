@@ -5,7 +5,7 @@
  * reading has come to be the source's (see `source.ts`).
  */
 import { adjacentPairs, groupBy, inclusiveScan, isDefined, lerp } from './algorithms'
-import { Analysis, asUnmeasured, Head } from './analysis'
+import { Analysis, asSemiMeasured, asUnmeasured, Head } from './analysis'
 import { engraveControls, StaffDrawing } from './controls'
 import { boundsOf, Drawing, group, Group, line, primitiveBoxes, text, translate } from './drawing'
 import { Box, union, unionAll } from './geometry'
@@ -27,8 +27,12 @@ export interface PageOptions {
     readonly source?: SourceHeads
 }
 
-/** How the heads are drawn: as notated, or as unmeasured notation writes them. */
-export type Noteheads = 'notated' | 'unmeasured'
+/**
+ * How the heads are drawn: as notated, as unmeasured notation writes them
+ * (all alike), or as d'Anglebert prints an unmeasured prelude (the quick
+ * notes as eighths, the others alike).
+ */
+export type Noteheads = 'notated' | 'unmeasured' | 'semi'
 
 export interface Page {
     readonly width: number
@@ -178,12 +182,13 @@ const engraveParts = (
     // An ornament follows the note it leads into, wherever that gives way to.
     const offsets = ornamentOffsets(analysis, layout)
     const weight = smoothstep(0, 1 / 3, t)
-    const shown = (head: Head) => noteheads === 'unmeasured' ? asUnmeasured(head) : head
+    const shown = (head: Head) =>
+        noteheads === 'unmeasured' ? asUnmeasured(head) : noteheads === 'semi' ? asSemiMeasured(head) : head
     const notes = keepApart(new Map(analysis.heads.flatMap(head => {
         const slot = layout.slots.get(head.id)
         return slot && !offsets.has(head.id) ? [[head.id, { head: shown(head), x: at(slot, t) }] as const] : []
     })), weight)
-    const placed = keepApart(new Map([...notes, ...analysis.heads.flatMap(head => {
+    const withOrnaments = keepApart(new Map([...notes, ...analysis.heads.flatMap(head => {
         const ornament = offsets.get(head.id)
         const [slot, of] = [layout.slots.get(head.id), ornament && layout.slots.get(ornament.target)]
         const target = ornament && notes.get(ornament.target)
@@ -191,6 +196,9 @@ const engraveParts = (
             ? [[head.id, { head: shown(head), x: target.x + ornamentOffset(ornament, slot, of, t) }] as const]
             : []
     })]), weight, gapBetween)
+    // Once all have given way, an accidental may have to stand further left, clear of a
+    // head that came up beside its own: once more, where the heads now stand.
+    const placed = weight >= 1 ? keepApart(withOrnaments, weight, gapBetween) : withOrnaments
     const barlines = layout.barlines.map(slot => at(slot, t))
     const staffIndices = score.staves.map((_, i) => i)
 

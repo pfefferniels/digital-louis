@@ -34,13 +34,15 @@ export const removeTiedNotes = (meiDoc: Document) => {
 }
 
 /**
- * Beams each run of ornamental notes read one after the other, as eighths.
- * Ornaments inside an encoded beam are beamed already.
+ * Beams each run of ornamental notes read one after the other, as eighths,
+ * as long as they stand side by side in one voice. Ornaments inside an
+ * encoded beam are beamed already.
  */
 export const insertBeamedOrnaments = (meiDoc: Document) => {
   const ornaments = Array.from(meiDoc.querySelectorAll('note[type="ornam"]'))
   const leadsTo = (note: Element, next: Element | undefined) =>
-    next !== undefined && note.getAttribute('precedes') === `#${next.getAttribute('xml:id')}`
+    next !== undefined && note.getAttribute('precedes') === `#${next.getAttribute('xml:id')}` &&
+    note.parentNode === next.parentNode && note.nextElementSibling === next
 
   const runs = ornaments.reduce<Element[][]>((runs, note, i) => {
     const current = runs[runs.length - 1]
