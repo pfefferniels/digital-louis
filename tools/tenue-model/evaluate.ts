@@ -12,13 +12,13 @@
  * spaced along the curve.
  */
 import { readFileSync } from 'fs'
-import { BauynModel, LayoutWeights, Obstacle, TenueRequest, layoutTenues } from '../../src/utils/tenues/layout'
+import { BauynModel, LayoutWeights, Obstacle, TenueRequest, Voice, layoutTenues } from '../../src/utils/tenues/layout'
 import { Cubic, Pt, dist, resampleByArcLength, sampleCubic } from '../../src/utils/tenues/geometry'
 import defaultModel from '../../src/utils/tenues/bauynModel.json'
 
 interface CorpusPiece {
     heads: { id: string, box: { x0: number, y0: number, x1: number, y1: number } }[]
-    tenues: { id: string, head: string, linked: boolean, staffTop: number, staffBottom: number, pts: Pt[] }[]
+    tenues: { id: string, head: string, voice?: Voice, linked: boolean, staffTop: number, staffBottom: number, pts: Pt[] }[]
 }
 
 const [corpusPath = 'tools/tenue-model/out/corpus.json', modelPath, ...onlyPieces] = process.argv.slice(2)
@@ -57,6 +57,7 @@ const run = (label: string, generate: Generator) => {
             originals.set(t.id, t.pts)
             return {
                 id: t.id,
+                voice: t.voice,
                 head: heads.get(t.head)!,
                 endX: t.pts[t.pts.length - 1].x,
                 staffTop: t.staffTop,

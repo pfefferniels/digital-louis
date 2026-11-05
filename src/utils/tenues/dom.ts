@@ -4,7 +4,7 @@
  * inserts the calligraphic tenues.
  */
 import { Box } from './geometry'
-import { Obstacle, ObstacleKind, PlacedTenue, TenueRequest, layoutTenues } from './layout'
+import { Obstacle, ObstacleKind, PlacedTenue, TenueRequest, Voice, layoutTenues } from './layout'
 import { penOutline, polygonToSvgPath } from './pen'
 import model from './bauynModel.json'
 
@@ -17,12 +17,31 @@ const MIN_REACH = 2.2
 /** how far a tenue continuing on the next system may run into the margin */
 const MARGIN_REACH = 1.2
 /**
- * How far a tenue reaches, by the distance to the note of its voice that
- * takes over: in the Bauyn manuscript it stops well short of that note, the
- * more so the farther away the note is (a fit to its 132 tenues: from 4.5
- * spaces for a note 5 away to 17 for one 40 away).
+ * How far a tenue reaches, by the voice of its note and the distance to the
+ * note of that voice that takes over. In the Bauyn manuscript the top
+ * voice's tenues are short, however far away that note; those of the voices
+ * beneath reach about a third of the way, the bass's most of it (least
+ * absolute deviation fits to the traced tenues, in staff spaces).
  */
-const REACH = { base: 2.6, perSpace: 0.37 }
+const REACH: Record<Voice, { base: number, perSpace: number }> = {
+    top: { base: 3.2, perSpace: 0.02 },
+    inner: { base: 2.4, perSpace: 0.35 },
+    bass: { base: 2.6, perSpace: 0.79 },
+}
+
+/**
+ * How wide the copyist writes a line, from its first note to its last, in
+ * staff spaces (Bauyn: 52 in Prélude 7, 55 in Prélude 10). An engraved line
+ * spreads its notes wider; a tenue is measured out as the copyist would
+ * have, by distances shrunk to his, and drawn at his size.
+ */
+const COPYIST_LINE = 54
+
+/** The part a voice plays, by the type of its layer: the top voice, the bass, or one between. */
+const voiceOf = (note: Element): Voice => {
+    const layer = note.closest('.layer')
+    return layer?.classList.contains('cantus') ? 'top' : layer?.classList.contains('bassus') ? 'bass' : 'inner'
+}
 /** where the note that takes over stands on a later system: this far beyond the end of the line */
 const ONWARD = 4
 
@@ -171,6 +190,10 @@ export const insertTenues = (svgEl: SVGElement) => {
             }
         }
 
+        // how much wider than the copyist this line spreads its notes
+        const lineStart = Math.min(...[...heads.values()].map(box => box.x0))
+        const spread = Math.min(3, Math.max(1, (lineEnd - lineStart) / COPYIST_LINE))
+
         const requests: TenueRequest[] = []
         for (const note of Array.from(system.querySelectorAll('.note[data-next]'))) {
             const classes = (note.getAttribute('class') || '').split(' ')
@@ -195,13 +218,15 @@ export const insertTenues = (svgEl: SVGElement) => {
             // the tenue reaches towards the note that takes over, short of it
             // (unless that note comes too soon for a tenue to show); one
             // continuing on the next system may run a little into the margin
+            const voice = voiceOf(note)
             const distance = takesOver - head.x1
-            const reach = Math.max(MIN_REACH, Math.min(REACH.base + REACH.perSpace * distance, distance - END_GAP))
+            const reach = Math.max(MIN_REACH, Math.min(REACH[voice].base + REACH[voice].perSpace * distance / spread, distance - END_GAP))
             const endX = Math.min(head.x1 + reach, releasedBy ? lineEnd - END_GAP : lineEnd + MARGIN_REACH)
 
             const { above, below } = neighbours(staves, staff)
             requests.push({
                 id,
+                voice,
                 head,
                 endX,
                 releasedBy,

@@ -45,6 +45,10 @@ MEI = '{http://www.music-encoding.org/ns/mei}'
 XMLID = '{http://www.w3.org/XML/1998/namespace}id'
 XLINK = '{http://www.w3.org/1999/xlink}href'
 
+# the part a voice plays in the texture, by the type of its layer
+VOICES = {'cantus': 'top', 'bassus': 'bass'}
+ROLES = ['top', 'inner', 'bass']
+
 
 # ---------------------------------------------------------------- loading --
 
@@ -75,7 +79,14 @@ def load_piece(piece):
     for el in mei.iter(MEI + 'note'):
         refs = (el.get('corresp') or el.get('corrsp') or '').split()
         corresp[el.get(XMLID) or id(el)] = [r.lstrip('#') for r in refs]
-    return dict(scan=scan, imgbox=imgbox, paths=paths, corresp=corresp)
+    # the voice each traced head belongs to: the top voice, the bass, or one between
+    voices = {}
+    for layer in mei.iter(MEI + 'layer'):
+        voice = VOICES.get(layer.get('type'), 'inner')
+        for el in layer.iter(MEI + 'note'):
+            for r in (el.get('corresp') or el.get('corrsp') or '').split():
+                voices.setdefault(r.lstrip('#'), voice)
+    return dict(scan=scan, imgbox=imgbox, paths=paths, corresp=corresp, voices=voices)
 
 
 def staves_from_scan(P):
@@ -212,9 +223,46 @@ def mad_sd(v):
     return float(1.4826 * np.median(np.abs(v - np.median(v))))
 
 
-def shape_features(L, hpos):
-    h = np.clip(hpos, -4, 4) / 4
-    return [1.0, h, min(L, 16) / 8, h * float(np.clip(1 - L / 8, 0, 1))]
+def passes_over(P, heads, hk, pts, staff, ss):
+    """Where the notes a tenue passes over lie on its staff: 1 all below its
+    note, -1 all above, 0 as many either way or none."""
+    hc = heads[hk]
+    x0, x1 = P['paths'][hk]['bbox'][2], pts[-1][0]
+    above = below = 0
+    for k, c in heads.items():
+        if k == hk or not x0 < c[0] < x1 or not staff[0] - 3 * ss < c[1] < staff[1] + 3 * ss:
+            continue
+        if c[1] < hc[1] - 0.4 * ss:  # (y down)
+            above += 1
+        elif c[1] > hc[1] + 0.4 * ss:
+            below += 1
+    return (below - above) / max(1, below + above)
+
+
+def context_features(r):
+    """The tenue's voice (top, bass, or between) and where the notes it passes over lie."""
+    return [float(r['voice'] == 'top'), float(r['voice'] == 'bass'), r['passes']]
+
+
+def side_features(r):
+    return [1.0, *context_features(r), np.clip(r['hpos'], -4, 4) / 4, min(r['L'], 16) / 8]
+
+
+def logistic(X, y, l2=0.1, iters=50):
+    """Logistic regression by Newton's method, lightly regularised."""
+    b = np.zeros(X.shape[1])
+    for _ in range(iters):
+        p = 1 / (1 + np.exp(-X @ b))
+        g = X.T @ (p - y) + l2 * b
+        H = X.T @ (X * (p * (1 - p))[:, None]) + l2 * np.eye(len(b))
+        b -= np.linalg.solve(H, g)
+    return b
+
+
+def shape_features(r):
+    h = np.clip(r['hpos'], -4, 4) / 4
+    L = r['L']
+    return [1.0, h, min(L, 16) / 8, h * float(np.clip(1 - L / 8, 0, 1)), *context_features(r)]
 
 
 # ------------------------------------------------------------- ink width --
@@ -239,6 +287,8 @@ def ink_widths(P, ss, tenue_pts_svg):
         xs = np.clip((cx - ts * ty).astype(int), 0, im.shape[1] - 1)
         ys = np.clip((cy + ts * tx).astype(int), 0, im.shape[0] - 1)
         win = im[max(0, int(cy) - 40):int(cy) + 40, max(0, int(cx) - 40):int(cx) + 40]
+        if win.size == 0:
+            continue  # off the scan
         dark = np.where(im[ys, xs] < np.percentile(win, 90) - 60)[0]
         if len(dark) == 0:
             continue
@@ -303,38 +353,52 @@ def main():
             hpos = float(hcs[1] - (top + bot) / 2)
             R = resample(Q, 50)
             y = R[:, 1]
+            bulge = (R - R[0]) @ n
+            bulge = float(bulge[np.argmax(np.abs(bulge))])
             tan1 = math.degrees(math.atan2(*(R[-1] - R[-4])[::-1]))
+            voice = P['voices'].get(hk, 'inner')
+            passes = passes_over(P, heads, hk, pts, staff, ss)
             rows.append(dict(
-                L=L, run=float(c[0]), rise=float(c[1]), hpos=hpos,
+                L=L, run=float(c[0]), rise=float(c[1]), hpos=hpos, voice=voice, passes=passes, bulge=bulge,
                 gap=float(Q[0, 0] - half_w), dy=float(Q[0, 1]),
                 c=[float((Pz[1] - Pz[0]) @ u / L), float((Pz[1] - Pz[0]) @ n / L),
                    float((Pz[2] - Pz[0]) @ u / L), float((Pz[2] - Pz[0]) @ n / L)],
                 end_above_top=float(A[-1, 1] - top), tan1=tan1, drop=float(y.max() - y[-1]), err=err))
             widths += ink_widths(P, ss, pts)
-            corpus[piece]['tenues'].append(dict(id=k, head=hk, linked=is_linked, staffTop=top, staffBottom=bot,
+            corpus[piece]['tenues'].append(dict(id=k, head=hk, voice=voice, linked=is_linked, staffTop=top, staffBottom=bot,
                                                 pts=[dict(x=float(a), y=float(b)) for a, b in A]))
 
     N = len(rows)
     errs = np.array([r['err'] for r in rows])
     print(f'{N} tenues; single cubic Bézier fit error: median {np.median(errs):.3f}, p90 {np.percentile(errs, 90):.3f} sp')
 
-    # start point
+    # start point: how far after the head, and how high (by voice and the notes passed over)
     gap = np.array([r['gap'] for r in rows])
     dy = np.array([r['dy'] for r in rows])
+    bdy, res_dy, _ = robust_lstsq(np.array([[1, *context_features(r)] for r in rows]), dy, k=2.0)
 
     # rise ~ run (saturating) and register
     max_run = 12
-    Xr = np.array([[1, min(r['run'], max_run), np.clip(r['hpos'], -4, 4)] for r in rows])
+    Xr = np.array([[1, min(r['run'], max_run), np.clip(r['hpos'], -4, 4), *context_features(r)] for r in rows])
     yr = np.array([r['rise'] for r in rows])
     br, res_r, _ = robust_lstsq(Xr, yr, k=2.0)
     rise_sd = mad_sd(res_r[:, 0])
 
-    # shape: inner control points in the chord frame
-    X = np.array([shape_features(r['L'], r['hpos']) for r in rows])
+    # shape: inner control points in the chord frame. A tenue either arches
+    # over (bulges to the left of its way) or sags: one mean shape for each
+    # side, and which side is likely, by its context
+    X = np.array([shape_features(r) for r in rows])
     Y = np.array([r['c'] for r in rows])
-    B, res, W = robust_lstsq(X, Y)
-    ev, evec = np.linalg.eigh(np.cov((res * W[:, None]).T))
+    arches = np.array([r['bulge'] > 0 for r in rows])
+    B_arch, res_a, W_a = robust_lstsq(X[arches], Y[arches])
+    B_sag, res_s, W_s = robust_lstsq(X[~arches], Y[~arches])
+    res = np.concatenate([res_a * W_a[:, None], res_s * W_s[:, None]])
+    ev, evec = np.linalg.eigh(np.cov(res.T))
     order = np.argsort(ev)[::-1]
+    S = np.array([side_features(r) for r in rows])
+    b_side = logistic(S, arches.astype(float))
+    p_arch = 1 / (1 + np.exp(-S @ b_side))
+    print(f'side: arch {arches.mean():.0%} of tenues; predicted right for {np.mean((p_arch > 0.5) == arches):.0%}')
 
     # ends
     eat = np.array([r['end_above_top'] for r in rows])
@@ -359,10 +423,19 @@ def main():
     model = dict(
         source=f'Bauyn manuscript ({", ".join(args.pieces)}): {N} traced tenues',
         units='staff spaces; x right, y up',
-        start=dict(gap=r4(np.median(gap)), gapSd=r4(mad_sd(gap)), dy=r4(np.median(dy)), dySd=r4(mad_sd(dy))),
-        rise=dict(coef=[r4(v) for v in br[:, 0]], sd=r4(rise_sd), maxRun=max_run),
-        shape=dict(features=['1', 'clip(hpos,-4,4)/4', 'min(L,16)/8', 'clip(hpos,-4,4)/4 * clip(1-L/8,0,1)'],
-                   coef=[[r4(v) for v in row] for row in B],
+        start=dict(gap=r4(np.median(gap)), gapSd=r4(mad_sd(gap)), dy=r4(np.median(dy)), dySd=r4(mad_sd(res_dy[:, 0])),
+                   gapByVoice={v: r4(np.median([r['gap'] for r in rows if r['voice'] == v])) for v in ROLES},
+                   dyFeatures=['1', 'top', 'bass', 'passes'], dyCoef=[r4(v) for v in bdy[:, 0]]),
+        context=dict(note='top/bass: the voice of the tenue\'s note (cantus, bassus; else between); '
+                          'passes: where the notes it passes over on its staff lie, 1 all below, -1 all above'),
+        rise=dict(features=['1', 'min(run,maxRun)', 'clip(hpos,-4,4)', 'top', 'bass', 'passes'],
+                  coef=[r4(v) for v in br[:, 0]], sd=r4(rise_sd), maxRun=max_run),
+        side=dict(note='the probability that a tenue arches over rather than sags: logistic in these features',
+                  features=['1', 'top', 'bass', 'passes', 'clip(hpos,-4,4)/4', 'min(L,16)/8'],
+                  coef=[r4(v) for v in b_side]),
+        shape=dict(features=['1', 'clip(hpos,-4,4)/4', 'min(L,16)/8', 'clip(hpos,-4,4)/4 * clip(1-L/8,0,1)', 'top', 'bass', 'passes'],
+                   arch=[[r4(v) for v in row] for row in B_arch],
+                   sag=[[r4(v) for v in row] for row in B_sag],
                    pcs=[[r4(v) for v in evec[:, i]] for i in order],
                    pcSd=[r4(math.sqrt(ev[i])) for i in order],
                    maxBulgeLength=20),

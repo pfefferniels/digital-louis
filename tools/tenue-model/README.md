@@ -9,20 +9,32 @@ of the Bauyn manuscript that are traced in the facsimile SVGs in `public/`.
 1. **Corpus.** Every traced tenue (open path in the facsimile SVG) is
    associated with the notehead it starts from: via `@corresp` in the MEI
    where available, geometrically otherwise. Staff lines are detected on the
-   scan so that everything can be expressed in staff spaces.
+   scan so that everything can be expressed in staff spaces. Each tenue
+   also knows the voice of its note (the top voice, `cantus`; the bass,
+   `bassus`; or one between) and where the notes it passes over on its
+   staff lie (`passes`: 1 all below its note, -1 all above).
 2. **Model** (`fit_bauyn_model.py` → `src/utils/tenues/bauynModel.json`).
    A single cubic Bézier fits every traced tenue (median error 0.01 staff
    spaces). From these curves the script learns where tenues start, how
-   much they rise (depending on length and register), their shape (inner
-   control points in the chord frame, regressed on length and register,
-   with a PCA of the residuals), how high they end, and the broad-nib pen
-   (ink width as a function of stroke direction, measured on the scan).
+   much they rise, which side they bulge to and their shape, how high they
+   end, and the broad-nib pen (ink width as a function of stroke direction,
+   measured on the scan). Start, rise, side and shape depend on length,
+   register, voice and `passes`: the copyist's tenues keep away from the
+   notes they pass over (sagging under notes above, arching over notes
+   below), so the top voice's mostly arch, the bass's sag. A tenue either
+   arches or sags: a logistic model gives the likelihood of each side (72 %
+   right), and each side has its own mean shape (inner control points in
+   the chord frame, with a PCA of the residuals).
 3. **Layout** (`src/utils/tenues/layout.ts`). Each tenue runs from its note
    towards the note of the same voice that takes over, stopping short of it
-   as the copyist does: its length is 2.6 + 0.37 × the distance to that note
-   (in staff spaces, a least-absolute-deviation fit to the traced tenues: 4.5
-   for a note 5 spaces away, 17 for one 40 away; for a note on a later line,
-   the distance runs 4 spaces past the end of this one). Its six
+   as the copyist does (`src/utils/tenues/dom.ts`; least-absolute-deviation
+   fits to the traced tenues, in staff spaces, `d` the distance to that
+   note): the top voice's are short, 3.2 + 0.02 d; those between reach
+   about a third of the way, 2.4 + 0.35 d; the bass's most of it,
+   2.6 + 0.79 d. The copyist writes a line in about 54 staff spaces, an
+   engraved line spreads wider: distances are shrunk to his before, and the
+   tenue drawn at his size. For a note on a later line, the distance runs
+   4 spaces past the end of this one. Its seven
    free parameters (start gap and height, end, rise, two shape coordinates)
    minimise a cost made of the learned prior plus the principles the copyist
    observed:
@@ -30,6 +42,7 @@ of the Bauyn manuscript that are traced in the facsimile SVGs in `public/`.
    | principle (Bauyn evidence)                                   | cost term          |
    | ------------------------------------------------------------ | ------------------ |
    | tenues rise (91 %), ≈ 0.6 × length, saturating at ~7 spaces  | `rise`, `falling`  |
+   | they keep away from the notes they pass over; the top voice's arch over (65 %), the others' rather sag | `side` |
    | short tenues: straight; long ones: J-swoosh or flat S        | `shape`            |
    | long tenues never hook down at the end (94 %)                | `endDirection`     |
    | they don't touch noteheads, accidentals, …                   | `collision`        |
@@ -66,13 +79,20 @@ npx esbuild tools/tenue-model/evaluate.ts --bundle --platform=node --format=esm 
 node tools/tenue-model/out/evaluate.mjs tools/tenue-model/out/corpus.json [model.json] [piece ...]
 ```
 
-Results at the time of writing (mean error, staff spaces):
+Results at the time of writing (errors in staff spaces, mean / median; the
+corpus has grown to 277 traced tenues since the first model, fitted on 132):
 
 | setting                                    | straight stroke | learned prior | full engine |
 | ------------------------------------------ | --------------- | ------------- | ----------- |
-| both preludes (in-sample, 132 tenues)      | 1.40            | 1.29          | 1.21        |
-| fit on Prélude 7, tested on Prélude 10     | 1.53            | 1.49          | 1.41 (in-sample: 1.37) |
-| fit on Prélude 10, tested on Prélude 7     | 1.37            | 1.22          | 1.11 (in-sample: 1.08) |
+| both preludes (in-sample, 277 tenues)      | 1.75 / 1.28     | 1.84 / 1.18   | 1.76 / 1.11 |
+| the first model, on the same 277 tenues    | 1.78 / 1.30     | 1.97 / 1.26   | 1.85 / 1.16 |
+| fit on Prélude 7, tested on Prélude 10     | 1.65 / 1.45     | 1.53 / 1.31   | 1.39 / 1.18 |
+| fit on Prélude 10, tested on Prélude 7     | 2.05 / 1.14     | 2.91 / 1.08   | 2.83 / 0.97 |
+
+The side a tenue bulges to agrees with the copyist's (in-sample) for 61 % of
+the top voice's tenues (the first model: 35 %), 55 % of those between (42 %)
+and 69 % of the bass's (59 %); the median error of the top voice's tenues
+fell from 1.10 to 0.65.
 
 A large part of the remaining error is the copyist's free hand: start point
 (±1 space) and rise (±1.7 spaces) vary a lot even in identical contexts, so
