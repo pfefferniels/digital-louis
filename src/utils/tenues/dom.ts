@@ -16,6 +16,15 @@ const END_GAP = 0.3
 const MIN_REACH = 2.2
 /** how far a tenue continuing on the next system may run into the margin */
 const MARGIN_REACH = 1.2
+/**
+ * How far a tenue reaches, by the distance to the note of its voice that
+ * takes over: in the Bauyn manuscript it stops well short of that note, the
+ * more so the farther away the note is (a fit to its 132 tenues: from 4.5
+ * spaces for a note 5 away to 17 for one 40 away).
+ */
+const REACH = { base: 2.6, perSpace: 0.37 }
+/** where the note that takes over stands on a later system: this far beyond the end of the line */
+const ONWARD = 4
 
 interface StaffInfo {
     el: Element
@@ -140,6 +149,8 @@ export const insertTenues = (svgEl: SVGElement) => {
             const s = el.closest('.staff')
             return staves.find(info => info.el === s)
         }
+        // each measure draws its own stretch of the staves: the line ends with the last
+        const lineEnd = Math.max(...staves.map(info => info.right))
 
         const obstacles: Obstacle[] = [...pageObstacles]
         const heads = new Map<string, Box>()
@@ -172,19 +183,21 @@ export const insertTenues = (svgEl: SVGElement) => {
             // the note sounds until the next note of its voice begins
             const nextId = (note.getAttribute('data-next') || '').replace(/^#/, '')
             const next = svgEl.querySelector(`[data-id="${nextId}"]`)
-            let endX = staff.right - END_GAP
+            let takesOver = lineEnd + ONWARD
             let releasedBy: string | undefined
             if (next && next.closest('.system') === system) {
                 const nextHead = heads.get(nextId) ?? (visibleHead(next) ? measure(visibleHead(next)!) : undefined)
                 if (nextHead) {
-                    endX = nextHead.x0 - END_GAP
+                    takesOver = nextHead.x0
                     releasedBy = nextId
                 }
             }
-            // a tenue continuing on the next system runs to the end of the
-            // staff and, if it would otherwise be too short, into the margin
-            const maxEnd = releasedBy ? staff.right - END_GAP : staff.right + MARGIN_REACH
-            endX = Math.min(maxEnd, Math.max(endX, head.x1 + MIN_REACH))
+            // the tenue reaches towards the note that takes over, short of it
+            // (unless that note comes too soon for a tenue to show); one
+            // continuing on the next system may run a little into the margin
+            const distance = takesOver - head.x1
+            const reach = Math.max(MIN_REACH, Math.min(REACH.base + REACH.perSpace * distance, distance - END_GAP))
+            const endX = Math.min(head.x1 + reach, releasedBy ? lineEnd - END_GAP : lineEnd + MARGIN_REACH)
 
             const { above, below } = neighbours(staves, staff)
             requests.push({
