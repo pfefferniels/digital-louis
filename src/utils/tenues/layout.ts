@@ -4,18 +4,22 @@
  *
  * Each tenue is a single cubic Bézier curve (which fits the traced Bauyn
  * tenues with a median error of 0.01 staff spaces). Its geometry is
- * described by six parameters:
+ * described by seven parameters:
  *
  *   gap, dy  – where the stroke starts, relative to the notehead
  *   endX     – where it ends (the note's offset)
  *   rise     – how much higher the end is than the start
+ *   arch     – whether it arches over or sags
  *   z1, z2   – shape coordinates in the learned shape space (PCA of the
  *              inner control points, expressed in the chord frame)
  *
  * The parameters are chosen by minimising a cost that combines
  *  (a) a prior learned from the Bauyn tenues (bauynModel.json): start
- *      point, upward rise, shape depending on length and register, end
- *      height, long tenues never hooking down at their end, and
+ *      point, upward rise, the side it bulges to and its shape, depending
+ *      on length, register, the voice of the note (the top voice's tenues
+ *      arch over, the bass's run long and steep) and on where the notes it
+ *      passes over lie (it keeps away from them); end height, long tenues
+ *      never hooking down at their end, and
  *  (b) layout principles the copyist observed (each checked on the traced
  *      tenues, see tools/tenue-model/README.md): no collisions with
  *      noteheads, accidentals etc., no crossing of other tenues, parallel
@@ -43,8 +47,23 @@ export interface Obstacle {
     owner?: string
 }
 
+/**
+ * The part the voice of a tenue's note plays in the texture. The copyist
+ * treats them differently: the top voice's tenues are short arches over the
+ * notes that follow, those of the voices beneath dip below them, and the
+ * bass's run long and steep.
+ */
+export type Voice = 'top' | 'inner' | 'bass'
+
 export interface TenueRequest {
     id: string
+    /** the voice of the note (inner if not given) */
+    voice?: Voice
+    /**
+     * where the notes the tenue passes over on its staff lie: 1 all below
+     * its note, -1 all above (found among the obstacles if not given)
+     */
+    passes?: number
     /** box of the notehead the tenue emanates from */
     head: Box
     /** x coordinate at which the tenue should end (the note's offset) */
@@ -81,6 +100,8 @@ export interface TenueParams {
     rise: number
     z1: number
     z2: number
+    /** 1 if the tenue arches over, 0 if it sags */
+    arch: number
 }
 
 export interface LayoutWeights {
@@ -91,6 +112,7 @@ export interface LayoutWeights {
     end: number
     endHeight: number
     endDirection: number
+    side: number
     collision: number
     crossing: number
     proximity: number
@@ -108,6 +130,7 @@ export const defaultWeights: LayoutWeights = {
     end: 2,
     endHeight: 0.7,
     endDirection: 2,
+    side: 2,
     collision: 60,
     crossing: 25,
     proximity: 12,
@@ -134,9 +157,32 @@ const headPosition = (r: TenueRequest) => {
     return Math.max(-4, Math.min(4, boxCenter(r.head).y - mid))
 }
 
-const meanRise = (m: BauynModel, run: number, hpos: number) => {
-    const [a, b, c] = m.rise.coef
-    return a + b * Math.min(Math.max(run, 0), m.rise.maxRun) + c * hpos
+/** What the copyist's tenues depend on besides the note itself: its voice, and the notes the tenue passes over. */
+const contextFeatures = (r: TenueRequest) => [r.voice === 'top' ? 1 : 0, r.voice === 'bass' ? 1 : 0, r.passes ?? 0]
+
+const dot = (coef: readonly number[], f: readonly number[]) => coef.reduce((sum, c, j) => sum + c * (f[j] ?? 0), 0)
+
+/** Where a tenue starts, relative to the right edge and the centre of its head. */
+const startOf = (m: BauynModel, r: TenueRequest) => ({
+    gap: m.start.gapByVoice?.[r.voice ?? 'inner'] ?? m.start.gap,
+    dy: m.start.dyCoef ? dot(m.start.dyCoef, [1, ...contextFeatures(r)]) : m.start.dy,
+})
+
+const meanRise = (m: BauynModel, run: number, hpos: number, r: TenueRequest) =>
+    dot(m.rise.coef, [1, Math.min(Math.max(run, 0), m.rise.maxRun), hpos, ...contextFeatures(r)])
+
+/** Where the notes between a tenue's head and its end lie on its staff: 1 all below the head, -1 all above. */
+const passesOver = (r: TenueRequest, obstacles: readonly Obstacle[]) => {
+    const y = boxCenter(r.head).y
+    let above = 0, below = 0
+    for (const o of obstacles) {
+        if (o.kind !== 'head' || o.owner === r.id) continue
+        const c = boxCenter(o.box)
+        if (c.x <= r.head.x1 || c.x >= r.endX || c.y < r.staffBottom - 3 || c.y > r.staffTop + 3) continue
+        if (c.y > y + 0.4) above++
+        else if (c.y < y - 0.4) below++
+    }
+    return (below - above) / Math.max(1, below + above)
 }
 
 /**
@@ -144,14 +190,25 @@ const meanRise = (m: BauynModel, run: number, hpos: number) => {
  * high notes arch over, those of low notes dip (J-shape); long tenues are
  * never arches but flat S- or J-curves.
  */
-const meanShape = (m: BauynModel, length: number, hpos: number) => {
+const meanShape = (m: BauynModel, length: number, hpos: number, r: TenueRequest, arch: boolean) => {
     const h = hpos / 4
-    const f = [1, h, Math.min(length, 16) / 8, h * Math.max(0, Math.min(1, 1 - length / 8))]
+    const f = [1, h, Math.min(length, 16) / 8, h * Math.max(0, Math.min(1, 1 - length / 8)), ...contextFeatures(r)]
+    const coef = arch ? m.shape.arch : m.shape.sag
     const out = [0, 0, 0, 0]
     for (let k = 0; k < 4; k++) {
-        for (let j = 0; j < f.length; j++) out[k] += f[j] * m.shape.coef[j][k]
+        for (let j = 0; j < coef.length; j++) out[k] += f[j] * coef[j][k]
     }
     return out
+}
+
+/**
+ * How likely the copyist would have a tenue arch over rather than sag: the
+ * top voice's mostly do, and so do those that pass over notes lower than
+ * their own, or start high in the staff; long ones rather sag.
+ */
+const archLikelihood = (m: BauynModel, r: TenueRequest, length: number) => {
+    const f = [1, ...contextFeatures(r), headPosition(r) / 4, Math.min(length, 16) / 8]
+    return 1 / (1 + Math.exp(-dot(m.side.coef, f)))
 }
 
 /** Builds the Bézier curve described by a parameter set. */
@@ -163,7 +220,7 @@ export const buildCurve = (m: BauynModel, r: TenueRequest, p: TenueParams): Cubi
     const L = Math.hypot(cx, cy) || 1
     const ux = cx / L, uy = cy / L
     const nx = -uy, ny = ux
-    const s = meanShape(m, L, headPosition(r))
+    const s = meanShape(m, L, headPosition(r), r, p.arch > 0.5)
     for (let k = 0; k < 4; k++) {
         s[k] += p.z1 * m.shape.pcSd[0] * m.shape.pcs[0][k] + p.z2 * m.shape.pcSd[1] * m.shape.pcs[1][k]
     }
@@ -195,6 +252,8 @@ interface Context {
     riseMean: number
     hpos: number
     pitchY: number
+    /** how likely the copyist would have the tenue arch over */
+    archLikely: number
 }
 
 const chordAngle = (pts: Pt[]) => {
@@ -213,10 +272,12 @@ const evaluate = (ctx: Context, p: TenueParams, bound = Infinity): number => {
     const { model: m, w, request: r } = ctx
     // (a) prior learned from the Bauyn tenues
     let cost = 0
-    cost += w.start * (sq((p.gap - m.start.gap) / m.start.gapSd) + sq((p.dy - m.start.dy) / m.start.dySd))
+    const start = startOf(m, r)
+    cost += w.start * (sq((p.gap - start.gap) / m.start.gapSd) + sq((p.dy - start.dy) / m.start.dySd))
     cost += w.rise * sq((p.rise - ctx.riseMean) / m.rise.sd)
     if (p.rise < 0) cost += w.falling * sq(p.rise)
     cost += w.shape * (sq(p.z1) + sq(p.z2))
+    cost -= w.side * Math.log(Math.max(1e-3, p.arch > 0.5 ? ctx.archLikely : 1 - ctx.archLikely))
     const overshoot = p.endX - r.endX
     cost += w.end * sq(overshoot / (overshoot > 0 ? 0.25 : 0.6))
     if (cost > bound) return Infinity
@@ -328,10 +389,12 @@ const sampleFor = (curve: Cubic) => {
 const segmentLength = (curve: Cubic, n: number) =>
     Math.hypot(curve[3].x - curve[0].x, curve[3].y - curve[0].y) / (n - 1)
 
-const steps: Record<keyof TenueParams, number> = {
+/** the side a tenue bulges to is chosen among the starting points, the rest searched */
+type Continuous = Exclude<keyof TenueParams, 'arch'>
+const steps: Record<Continuous, number> = {
     gap: 0.4, dy: 0.3, endX: 0.4, rise: 1.0, z1: 1.0, z2: 1.0
 }
-const keys = Object.keys(steps) as (keyof TenueParams)[]
+const keys = Object.keys(steps) as Continuous[]
 
 const patternSearch = (ctx: Context, start: TenueParams) => {
     let best = start
@@ -359,17 +422,22 @@ const patternSearch = (ctx: Context, start: TenueParams) => {
 
 const startingPoints = (ctx: Context, r: TenueRequest): TenueParams[] => {
     const m = ctx.model
-    const base: TenueParams = { gap: m.start.gap, dy: m.start.dy, endX: r.endX, rise: ctx.riseMean, z1: 0, z2: 0 }
-    return [
-        base,
-        { ...base, z1: -1.5 },                       // J-swoosh / pass below
-        { ...base, z1: 1.5 },                        // arch / pass above
-        { ...base, rise: ctx.riseMean * 0.4, z1: -1.5 },
-        { ...base, rise: ctx.riseMean * 0.4, z1: 1.5 },
-        { ...base, gap: m.start.gap * 0.5, dy: m.start.dy - 0.5 },
-        { ...base, rise: 0, z1: -1 },                // under everything
-        { ...base, rise: ctx.riseMean * 1.3, z1: 1 } // over everything
-    ]
+    const start = startOf(m, r)
+    // the likelier side first, then the other
+    const likely = ctx.archLikely > 0.5 ? 1 : 0
+    return [likely, 1 - likely].flatMap(arch => {
+        const base: TenueParams = { gap: start.gap, dy: start.dy, endX: r.endX, rise: ctx.riseMean, z1: 0, z2: 0, arch }
+        return [
+            base,
+            { ...base, z1: -1.5 },                       // J-swoosh / pass below
+            { ...base, z1: 1.5 },                        // arch / pass above
+            { ...base, rise: ctx.riseMean * 0.4, z1: -1.5 },
+            { ...base, rise: ctx.riseMean * 0.4, z1: 1.5 },
+            { ...base, gap: start.gap * 0.5, dy: start.dy - 0.5 },
+            { ...base, rise: 0, z1: -1 },                // under everything
+            { ...base, rise: ctx.riseMean * 1.3, z1: 1 } // over everything
+        ]
+    })
 }
 
 export interface LayoutOptions {
@@ -387,7 +455,9 @@ export const layoutTenues = (scene: TenueScene, options: LayoutOptions = {}): Pl
     const w = { ...defaultWeights, ...(options.weights ?? {}) }
     const refinements = options.refinements ?? 1
 
-    const requests = [...scene.requests].sort((a, b) => a.head.x0 - b.head.x0)
+    const requests = [...scene.requests]
+        .map(r => (r.passes === undefined ? { ...r, passes: passesOver(r, scene.obstacles) } : r))
+        .sort((a, b) => a.head.x0 - b.head.x0)
     const placed = new Map<string, Placed>()
     const result = new Map<string, PlacedTenue>()
 
@@ -399,7 +469,7 @@ export const layoutTenues = (scene: TenueScene, options: LayoutOptions = {}): Pl
             y1: r.ceiling + 1
         }
         const hpos = headPosition(r)
-        const run = r.endX - (r.head.x1 + model.start.gap)
+        const run = r.endX - (r.head.x1 + startOf(model, r).gap)
         const obstacles = scene.obstacles.filter(o =>
             boxesOverlap(o.box, region, 0.5) && (o.owner === undefined || o.owner !== r.releasedBy))
         return {
@@ -409,7 +479,8 @@ export const layoutTenues = (scene: TenueScene, options: LayoutOptions = {}): Pl
                 .filter(o => o.kind === 'head' && o.owner !== r.id)
                 .map(o => boxCenter(o.box)),
             others: [...placed.values()].filter(o => o.id !== r.id),
-            riseMean: meanRise(model, run, hpos)
+            riseMean: meanRise(model, run, hpos, r),
+            archLikely: archLikelihood(model, r, Math.hypot(run, meanRise(model, run, hpos, r)))
         }
     }
 
