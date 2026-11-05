@@ -156,7 +156,7 @@ const drawOrnament = (scene: ControlScene, measure: number, ornament: Ornament):
     return [{
         staff: placed.head.staff,
         measure,
-        drawing: group([className], [glyph(name, origin, ornamentScale)], { id: ornament.id }),
+        drawing: group([className], [glyph(name, origin, ornamentScale)], { id: ornament.id, data: { startid: ornament.on } }),
     }]
 }
 

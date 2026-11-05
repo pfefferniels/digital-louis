@@ -62,7 +62,8 @@ facsimile linking work on it unchanged:
 `.notehead`, `.stem`, `.accid`, `.dots`, `.flag`; `.beam polygon`,
 `.ledgerLines`, `.tie`, `.trill`, `.mordent`, `.harm .fb`, `.dir`,
 `.bracketSpan`, `.barLine`, `.clef`, `.pgHead`; `data-id`, `data-corresp`,
-`data-precedes`, `data-next`. Glyphs are `<use xlink:href>` elements with
+`data-precedes`, `data-next`, and on an ornament's sign the note it belongs
+to, `data-startid`. Glyphs are `<use xlink:href>` elements with
 `width` and `height`, each in a `<g transform="translate(x y)">` of its own,
 which a browser moves more cheaply than the `<use>` itself.
 
