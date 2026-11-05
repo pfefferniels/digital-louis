@@ -12,7 +12,10 @@ const positionMap = new Map([
 const stepLength = 50
 const lastStep = 300
 
-/** What each step shows. The figured bass belongs to the harmonic framework, the cadences to the form. */
+/**
+ * What each step shows. The figured bass belongs to the harmonic framework, the
+ * cadences to the form. A note's ledger lines are drawn with it and show with it.
+ */
 const visibilityMap = new Map<string, string[]>([
     [
         'papier', []
@@ -24,10 +27,10 @@ const visibilityMap = new Map<string, string[]>([
         'basse-chant', ['.bassus', '.cantus', '.clef', '.stem', '.barLine', '.fb', '.cadence']
     ],
     [
-        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.tie', '.fb']
+        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.beam polygon', '.dots', '.tie', '.fb']
     ],
     [
-        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.ledgerLines', '.beam polygon', '.dots', '.tie']
+        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.beam polygon', '.dots', '.tie']
     ],
     [
         'semi-mesure', ['.clef', '.beam polygon', '.beam .stem', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
@@ -37,7 +40,7 @@ const visibilityMap = new Map<string, string[]>([
     ]
 ])
 
-const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.ledgerLines', '.beam polygon', '.dots', '.tie', '.ornam']
+const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.beam polygon', '.dots', '.tie', '.ornam']
 
 /** Every selector a step decides on. */
 const controlled = [...new Set([...allSelectors, ...[...visibilityMap.values()].flat()])].join(',')

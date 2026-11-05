@@ -125,6 +125,7 @@ const drawNote = (scene: LayerScene, placed: PlacedHead<NoteHead>, stem: Stem | 
     const dots = dotCenters(placed)
     const flag = stem && flagged && head.stem ? flagAt(stem.x, stem.tip, head.stem, head.scale) : undefined
     return group(['note', ...head.note.types], [
+        ...drawLedgerLines(placed),
         group(['notehead'], [glyph(head.glyph, headOrigin(placed), head.scale)]),
         ...(accidental ? [group(['accid'], [glyph(accidental.glyph, accidental.origin, head.scale)])] : []),
         ...(dots.length > 0
@@ -223,24 +224,16 @@ const ledgerPositions = (position: StaffPosition): StaffPosition[] => {
     ]
 }
 
-const drawLedgerLines = (heads: readonly PlacedHead<NoteHead>[]): Drawing[] => {
-    const dashes = heads.flatMap(placed => {
-        const { scale } = placed.head
-        const extension = engravingDefaults.legerLineExtension * scale
-        return ledgerPositions(placed.head.position).map(position => ({
-            side: position > topLine ? 'above' : 'below',
-            drawing: line(
-                { x: placed.x - extension, y: positionY(position) },
-                { x: placed.x + headWidth(placed.head) + extension, y: positionY(position) },
-                engravingDefaults.legerLineThickness * scale
-            ),
-        }))
-    })
-    const side = (name: 'above' | 'below'): Drawing[] => {
-        const lines = dashes.filter(dash => dash.side === name).map(dash => dash.drawing)
-        return lines.length > 0 ? [group(['ledgerLines', name], lines)] : []
-    }
-    return [...side('above'), ...side('below')]
+/** The ledger lines of a head, drawn with its note, so that they show as far as the note does. */
+const drawLedgerLines = (placed: PlacedHead<NoteHead>): Drawing[] => {
+    const { head, x } = placed
+    const extension = engravingDefaults.legerLineExtension * head.scale
+    const lines = ledgerPositions(head.position).map(position => line(
+        { x: x - extension, y: positionY(position) },
+        { x: x + headWidth(head) + extension, y: positionY(position) },
+        engravingDefaults.legerLineThickness * head.scale
+    ))
+    return lines.length > 0 ? [group(['ledgerLines'], lines)] : []
 }
 
 const glyphsOf = (glyphs: readonly PlacedGlyph[]): Drawing[] =>
@@ -270,7 +263,6 @@ export const engraveStaff = (scene: StaffScene): Group => {
     return group(['staff'], [
         ...staffLines(scene.left, scene.right),
         ...scene.signatures.flatMap(drawSignature),
-        ...drawLedgerLines(placed.filter(isPlacedNote)),
         ...layers,
     ], { data: { n: String(score.staves[staff].n) } })
 }

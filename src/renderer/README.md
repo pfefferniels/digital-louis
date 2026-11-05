@@ -59,8 +59,8 @@ The output keeps the class and data vocabulary the viewer selects by, so
 facsimile linking work on it unchanged:
 
 `.system > .measure > .staff > .layer.<voice> > .note.<type>` with
-`.notehead`, `.stem`, `.accid`, `.dots`, `.flag`; `.beam polygon`,
-`.ledgerLines`, `.tie`, `.trill`, `.mordent`, `.harm .fb`, `.dir`,
+`.notehead`, `.ledgerLines`, `.stem`, `.accid`, `.dots`, `.flag`;
+`.beam polygon`, `.tie`, `.trill`, `.mordent`, `.harm .fb`, `.dir`,
 `.bracketSpan`, `.barLine`, `.clef`, `.pgHead`; `data-id`, `data-corresp`,
 `data-precedes`, `data-next`, and on an ornament's sign the note it belongs
 to, `data-startid`. Glyphs are `<use xlink:href>` elements with
