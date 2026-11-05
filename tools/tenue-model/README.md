@@ -18,7 +18,11 @@ of the Bauyn manuscript that are traced in the facsimile SVGs in `public/`.
    with a PCA of the residuals), how high they end, and the broad-nib pen
    (ink width as a function of stroke direction, measured on the scan).
 3. **Layout** (`src/utils/tenues/layout.ts`). Each tenue runs from its note
-   (onset) to the note of the same voice that takes over (offset). Its six
+   towards the note of the same voice that takes over, stopping short of it
+   as the copyist does: its length is 2.6 + 0.37 × the distance to that note
+   (in staff spaces, a least-absolute-deviation fit to the traced tenues: 4.5
+   for a note 5 spaces away, 17 for one 40 away; for a note on a later line,
+   the distance runs 4 spaces past the end of this one). Its six
    free parameters (start gap and height, end, rise, two shape coordinates)
    minimise a cost made of the learned prior plus the principles the copyist
    observed:
