@@ -217,13 +217,23 @@ const Work = ({ id }: WorkProps) => {
 
   // Both the semi-measured and the unmeasured view draw tenues following the
   // practice of the Bauyn manuscript, once the view has come to rest. They are
-  // fitted to the notes where they are engraved, even in the source.
+  // fitted to the notes where they are engraved, even in the source, and
+  // once the notes have glided there (see `crossfade`).
   const resting = shown === position
   useEffect(() => {
     const svg = score.current?.querySelector('svg')
     if (!svg || !resting || shown <= measured + step) return
-    const timer = setTimeout(() => atRest(svg, () => insertTenues(svg)), 100)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    const timer = setTimeout(() => {
+      const gliding = svg.getAnimations({ subtree: true }).map(glide => glide.finished.catch(() => undefined))
+      Promise.all(gliding).then(() => {
+        if (!cancelled && svg.isConnected) atRest(svg, () => insertTenues(svg))
+      })
+    }, 100)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [resting, shown, prepared])
 
   // In the manuscript, the notes are linked to their traces:
