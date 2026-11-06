@@ -15,34 +15,34 @@ const lastStep = 300
 /**
  * What each step shows. The figured bass belongs to the harmonic framework, the
  * cadences to the form. A note's ledger lines and dots are drawn with it and show
- * with it. The semi-measured view follows d'Anglebert's print, with bar lines;
- * only its quick notes have stems.
+ * with it. The semi-measured view follows d'Anglebert's print, with bar lines
+ * and without rests; only its quick notes have stems.
  */
 const visibilityMap = new Map<string, string[]>([
     [
         'papier', []
     ],
     [
-        'basse', ['.bassus', '.clef', '.stem', '.barLine', '.cadence']
+        'basse', ['.bassus', '.clef', '.stem', '.barLine', '.rest', '.cadence']
     ],
     [
-        'basse-chant', ['.bassus', '.cantus', '.clef', '.stem', '.barLine', '.fb', '.cadence']
+        'basse-chant', ['.bassus', '.cantus', '.clef', '.stem', '.barLine', '.rest', '.fb', '.cadence']
     ],
     [
-        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.beam polygon', '.tie', '.fb']
+        'mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.rest', '.stem', '.virtual', '.beam polygon', '.tie', '.fb']
     ],
     [
-        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.stem', '.beam polygon', '.tie']
+        'jamais-daplomb', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.barLine', '.rest', '.stem', '.beam polygon', '.tie']
     ],
     [
         'semi-mesure', ['.clef', '.beam polygon', '.stem', '.barLine', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
     ],
     [
-        'non-mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam']
+        'non-mesure', ['.clef', '.bassus', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.ornam', '.rest']
     ]
 ])
 
-const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.stem', '.virtual', '.beam polygon', '.tie', '.ornam']
+const allSelectors = ['.mNum', '.cadence', '.clef', '.bassus', '.fb', '.cantus', '.altus', '.tenor', '.quintus', '.sextus', '.barLine', '.rest', '.stem', '.virtual', '.beam polygon', '.tie', '.ornam']
 
 /** Every selector a step decides on. */
 const controlled = [...new Set([...allSelectors, ...[...visibilityMap.values()].flat()])].join(',')
